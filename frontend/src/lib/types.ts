@@ -41,3 +41,29 @@ export interface Filters {
   mw_max: number;
   search: string;
 }
+
+export interface EpcSource {
+  channel: string;
+  publication: string | null;
+  date: string | null;
+  url: string | null;
+  excerpt: string;
+  reliability: "high" | "medium" | "low";
+}
+
+export interface EpcDiscovery {
+  id: string;
+  project_id: string;
+  epc_contractor: string;
+  confidence: "confirmed" | "likely" | "possible" | "unknown";
+  sources: EpcSource[];
+  reasoning: string | null;
+  related_leads: Record<string, unknown>[];
+  review_status: "pending" | "accepted" | "rejected";
+  agent_log: Record<string, unknown>[];
+  tokens_used: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EpcFilter = "all" | "needs_research" | "has_epc" | "pending_review";

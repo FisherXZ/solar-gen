@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Lead Gen Agent — Product Roadmap</title>
+
+    <!-- Fonts: Satoshi + Clash Display from Fontshare -->
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=clash-display@500,600,700&display=swap">
+
+    <style>
+        /* ===========================================
+           SWISS MODERN THEME
+           Precise, data-focused, clean typography.
+           Inspired by Swiss/International design.
+           =========================================== */
+        :root {
+            /* Colors — dark slate with precise accents */
+            --bg-primary: #0c1117;
+            --bg-secondary: #151c25;
+            --bg-card: #1a222d;
+            --bg-card-hover: #1f2937;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(99, 179, 237, 0.25);
+
+            --text-primary: #f0f4f8;
+            --text-secondary: #8899a6;
+            --text-muted: #5c6b7a;
+
+            --accent: #63b3ed;
+            --accent-warm: #f6ad55;
+            --accent-green: #68d391;
+            --accent-red: #fc8181;
+            --accent-purple: #b794f4;
+
+            /* Typography — MUST use clamp() */
+            --font-display: 'Clash Display', sans-serif;
+            --font-body: 'Satoshi', -apple-system, sans-serif;
+            --font-mono: 'SF Mono', 'Fira Code', monospace;
+
+            --title-size: clamp(1.8rem, 5vw, 3.8rem);
+            --h2-size: clamp(1.3rem, 3.5vw, 2.4rem);
+            --h3-size: clamp(1rem, 2.2vw, 1.4rem);
+            --body-size: clamp(0.78rem, 1.3vw, 1.05rem);
+            --small-size: clamp(0.65rem, 1vw, 0.85rem);
+            --label-size: clamp(0.6rem, 0.9vw, 0.75rem);
+
+            /* Spacing */
+            --slide-padding: clamp(1.5rem, 4vw, 5rem);
+            --content-gap: clamp(0.75rem, 2vw, 2rem);
+            --element-gap: clamp(0.3rem, 0.8vw, 0.75rem);
+
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+            --duration: 0.7s;
+        }
+
+        /* ===========================================
+           BASE STYLES
+           =========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            height: 100%;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===========================================
+           SLIDE CONTAINER — exact viewport fit
+           =========================================== */
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            padding: var(--slide-padding);
+        }
+
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        /* ===========================================
+           PROGRESS BAR
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            background: var(--accent);
+            z-index: 1000;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        /* ===========================================
+           NAV DOTS
+           =========================================== */
+        .nav-dots {
+            position: fixed;
+            right: clamp(0.75rem, 2vw, 1.5rem);
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0;
+        }
+
+        .nav-dot.active {
+            background: var(--accent);
+            transform: scale(1.5);
+        }
+
+        .nav-dot:hover {
+            background: var(--text-secondary);
+        }
+
+        /* ===========================================
+           SLIDE COUNTER
+           =========================================== */
+        .slide-counter {
+            position: fixed;
+            bottom: clamp(1rem, 2vw, 1.5rem);
+            right: clamp(1rem, 3vw, 2rem);
+            font-family: var(--font-mono);
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            z-index: 100;
+        }
+
+        /* ===========================================
+           TYPOGRAPHY
+           =========================================== */
+        .slide-label {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: clamp(0.5rem, 1vw, 1rem);
+        }
+
+        .slide h1 {
+            font-family: var(--font-display);
+            font-size: var(--title-size);
+            font-weight: 600;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: var(--h2-size);
+            font-weight: 600;
+            line-height: 1.15;
+            letter-spacing: -0.015em;
+            color: var(--text-primary);
+            margin-bottom: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: var(--h3-size);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: var(--element-gap);
+        }
+
+        .slide p, .slide li {
+            font-size: var(--body-size);
+            line-height: 1.55;
+            color: var(--text-secondary);
+        }
+
+        .subtitle {
+            font-size: clamp(0.9rem, 1.8vw, 1.2rem);
+            color: var(--text-secondary);
+            margin-top: clamp(0.5rem, 1vw, 1rem);
+            max-width: 600px;
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity var(--duration) var(--ease-out-expo),
+                        transform var(--duration) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-delay-1 { transition-delay: 0.08s; }
+        .reveal-delay-2 { transition-delay: 0.16s; }
+        .reveal-delay-3 { transition-delay: 0.24s; }
+        .reveal-delay-4 { transition-delay: 0.32s; }
+        .reveal-delay-5 { transition-delay: 0.40s; }
+        .reveal-delay-6 { transition-delay: 0.48s; }
+
+        /* Fade-in from left */
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: opacity var(--duration) var(--ease-out-expo),
+                        transform var(--duration) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal-left {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Scale in */
+        .reveal-scale {
+            opacity: 0;
+            transform: scale(0.92);
+            transition: opacity var(--duration) var(--ease-out-expo),
+                        transform var(--duration) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal-scale {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* ===========================================
+           LAYOUT HELPERS
+           =========================================== */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(1.5rem, 3vw, 3rem);
+            align-items: start;
+        }
+
+        .three-col {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: clamp(0.75rem, 1.5vw, 1.5rem);
+        }
+
+        .four-col {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(0.5rem, 1vw, 1rem);
+        }
+
+        @media (max-width: 768px) {
+            .two-col, .three-col, .four-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===========================================
+           CARD COMPONENT
+           =========================================== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: clamp(1rem, 2vw, 1.5rem);
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: var(--bg-card-hover);
+        }
+
+        .card-label {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: clamp(0.3rem, 0.5vw, 0.5rem);
+        }
+
+        .card-value {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: clamp(0.15rem, 0.3vw, 0.25rem);
+        }
+
+        .card-desc {
+            font-size: var(--small-size);
+            color: var(--text-muted);
+        }
+
+        /* ===========================================
+           TABLE COMPONENT
+           =========================================== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--small-size);
+        }
+
+        .data-table th {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            text-align: left;
+            padding: clamp(0.4rem, 0.8vw, 0.75rem) clamp(0.5rem, 1vw, 1rem);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+        }
+
+        .data-table td {
+            padding: clamp(0.4rem, 0.8vw, 0.7rem) clamp(0.5rem, 1vw, 1rem);
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: top;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(99, 179, 237, 0.04);
+        }
+
+        .data-table .highlight {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ===========================================
+           TAG / BADGE
+           =========================================== */
+        .tag {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            padding: 0.15em 0.6em;
+            border-radius: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-blue { background: rgba(99, 179, 237, 0.15); color: var(--accent); }
+        .tag-green { background: rgba(104, 211, 145, 0.15); color: var(--accent-green); }
+        .tag-orange { background: rgba(246, 173, 85, 0.15); color: var(--accent-warm); }
+        .tag-red { background: rgba(252, 129, 129, 0.15); color: var(--accent-red); }
+        .tag-purple { background: rgba(183, 148, 244, 0.15); color: var(--accent-purple); }
+
+        /* ===========================================
+           DIVIDER
+           =========================================== */
+        .divider {
+            width: 40px;
+            height: 2px;
+            background: var(--accent);
+            margin: clamp(0.5rem, 1vw, 1rem) 0;
+        }
+
+        /* ===========================================
+           BULLET LIST
+           =========================================== */
+        .bullet-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.35rem, 0.8vh, 0.65rem);
+        }
+
+        .bullet-list li {
+            padding-left: 1.2em;
+            position: relative;
+        }
+
+        .bullet-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.55em;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .bullet-list.red li::before { background: var(--accent-red); }
+        .bullet-list.green li::before { background: var(--accent-green); }
+
+        /* ===========================================
+           CHAPTER INTRO SLIDES
+           =========================================== */
+        .chapter-slide {
+            background: var(--bg-secondary);
+        }
+
+        .chapter-number {
+            font-family: var(--font-display);
+            font-size: clamp(4rem, 12vw, 10rem);
+            font-weight: 700;
+            color: rgba(99, 179, 237, 0.08);
+            line-height: 1;
+            position: absolute;
+            top: 50%;
+            left: var(--slide-padding);
+            transform: translateY(-55%);
+        }
+
+        .chapter-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===========================================
+           TIMELINE COMPONENT
+           =========================================== */
+        .timeline {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            position: relative;
+            margin-top: clamp(1rem, 2vw, 2rem);
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            flex: 1;
+            position: relative;
+            padding-top: clamp(1.2rem, 2.5vw, 2rem);
+            padding-right: clamp(0.5rem, 1vw, 1rem);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--bg-primary);
+        }
+
+        .timeline-item.done::before {
+            background: var(--accent-green);
+        }
+
+        .timeline-label {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        .timeline-item.done .timeline-label {
+            color: var(--accent-green);
+        }
+
+        .timeline-title {
+            font-family: var(--font-display);
+            font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .timeline-desc {
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .timeline {
+                flex-direction: column;
+                gap: clamp(0.75rem, 1.5vw, 1rem);
+            }
+            .timeline::before {
+                top: 0;
+                bottom: 0;
+                left: 4px;
+                width: 2px;
+                height: auto;
+                right: auto;
+            }
+            .timeline-item {
+                padding-top: 0;
+                padding-left: 1.5rem;
+            }
+            .timeline-item::before {
+                top: 2px;
+            }
+        }
+
+        /* ===========================================
+           PROCESS FLOW
+           =========================================== */
+        .process-flow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(0.5rem, 1vw, 1rem);
+            margin-top: clamp(1rem, 2vw, 2rem);
+        }
+
+        .process-step {
+            position: relative;
+            padding: clamp(0.75rem, 1.5vw, 1.25rem);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            border-top: 2px solid var(--accent);
+        }
+
+        .process-step-num {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        .process-step h4 {
+            font-family: var(--font-display);
+            font-size: clamp(0.85rem, 1.3vw, 1.05rem);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .process-step p {
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .process-flow {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* ===========================================
+           SPLIT COMPARISON
+           =========================================== */
+        .split-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            margin-top: clamp(0.75rem, 1.5vw, 1.5rem);
+        }
+
+        .split-side {
+            padding: clamp(1.2rem, 2.5vw, 2rem);
+        }
+
+        .split-left {
+            background: rgba(252, 129, 129, 0.04);
+            border-right: 1px solid var(--border);
+        }
+
+        .split-right {
+            background: rgba(104, 211, 145, 0.04);
+        }
+
+        .split-header {
+            font-family: var(--font-mono);
+            font-size: var(--label-size);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: clamp(0.5rem, 1vw, 1rem);
+        }
+
+        .split-left .split-header { color: var(--accent-red); }
+        .split-right .split-header { color: var(--accent-green); }
+
+        @media (max-width: 600px) {
+            .split-compare {
+                grid-template-columns: 1fr;
+            }
+            .split-left {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+
+        /* ===========================================
+           INSIGHT CALLOUT
+           =========================================== */
+        .insight-box {
+            background: rgba(99, 179, 237, 0.06);
+            border-left: 3px solid var(--accent);
+            padding: clamp(0.75rem, 1.5vw, 1.25rem);
+            border-radius: 0 8px 8px 0;
+            margin-top: clamp(0.75rem, 1.5vw, 1.5rem);
+        }
+
+        .insight-box p {
+            font-size: var(--body-size);
+            color: var(--text-primary);
+            font-style: italic;
+        }
+
+        /* ===========================================
+           TITLE SLIDE SPECIAL
+           =========================================== */
+        .title-slide {
+            position: relative;
+        }
+
+        .title-slide::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -10%;
+            width: 60%;
+            height: 80%;
+            background: radial-gradient(ellipse, rgba(99, 179, 237, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .title-slide .divider {
+            width: 60px;
+            margin: clamp(0.75rem, 1.5vw, 1.5rem) 0;
+        }
+
+        .title-meta {
+            font-family: var(--font-mono);
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* ===========================================
+           GRID BACKGROUND PATTERN
+           =========================================== */
+        .grid-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        /* ===========================================
+           RESPONSIVE — SHORT VIEWPORTS
+           =========================================== */
+        @media (max-height: 700px) {
+            :root {
+                --slide-padding: clamp(1rem, 3vw, 2.5rem);
+                --content-gap: clamp(0.5rem, 1.5vw, 1rem);
+                --title-size: clamp(1.5rem, 4.5vw, 2.8rem);
+                --h2-size: clamp(1.1rem, 3vw, 1.8rem);
+            }
+        }
+
+        @media (max-height: 600px) {
+            :root {
+                --slide-padding: clamp(0.75rem, 2.5vw, 1.5rem);
+                --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+                --title-size: clamp(1.2rem, 4vw, 2rem);
+                --body-size: clamp(0.7rem, 1.2vw, 0.9rem);
+            }
+            .nav-dots, .slide-counter { display: none; }
+            .chapter-number { font-size: clamp(3rem, 10vw, 6rem); }
+        }
+
+        @media (max-height: 500px) {
+            :root {
+                --slide-padding: clamp(0.5rem, 2vw, 1rem);
+                --title-size: clamp(1rem, 3.5vw, 1.5rem);
+                --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+                --body-size: clamp(0.65rem, 1vw, 0.85rem);
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+            html { scroll-behavior: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Progress bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation dots -->
+    <nav class="nav-dots" id="navDots"></nav>
+
+    <!-- Slide counter -->
+    <div class="slide-counter" id="slideCounter">01 / 15</div>
+
+
+    <!-- =============================================
+         SLIDE 1: TITLE
+         ============================================= -->
+    <section class="slide title-slide grid-bg">
+        <div class="slide-content">
+            <p class="slide-label reveal">Product Roadmap</p>
+            <h1 class="reveal reveal-delay-1">Solar Lead<br>Gen Agent</h1>
+            <div class="divider reveal reveal-delay-2"></div>
+            <p class="subtitle reveal reveal-delay-3">From research to design — how we turn ISO queue data into actionable sales intelligence for Civ Robotics.</p>
+            <p class="title-meta reveal reveal-delay-4" style="margin-top: clamp(1rem, 2vw, 2rem);">March 2026 &nbsp;·&nbsp; Draft</p>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 2: AGENDA
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">Overview</p>
+            <h2 class="reveal reveal-delay-1">What We'll Cover</h2>
+
+            <div class="four-col" style="margin-top: clamp(1rem, 2vw, 2rem);">
+                <div class="card reveal reveal-delay-2" style="border-top: 2px solid var(--accent);">
+                    <div class="card-label" style="color: var(--accent);">01</div>
+                    <h3>My Vision</h3>
+                    <p style="font-size: var(--small-size); color: var(--text-muted);">Why this product needs to exist and what we're building</p>
+                </div>
+                <div class="card reveal reveal-delay-3" style="border-top: 2px solid var(--accent-warm);">
+                    <div class="card-label" style="color: var(--accent-warm);">02</div>
+                    <h3>My Thinking</h3>
+                    <p style="font-size: var(--small-size); color: var(--text-muted);">The key insight that drives every design decision</p>
+                </div>
+                <div class="card reveal reveal-delay-4" style="border-top: 2px solid var(--accent-green);">
+                    <div class="card-label" style="color: var(--accent-green);">03</div>
+                    <h3>My Research</h3>
+                    <p style="font-size: var(--small-size); color: var(--text-muted);">Project lifecycle mapping & EPC discovery channels</p>
+                </div>
+                <div class="card reveal reveal-delay-5" style="border-top: 2px solid var(--accent-purple);">
+                    <div class="card-label" style="color: var(--accent-purple);">04</div>
+                    <h3>Research → Design</h3>
+                    <p style="font-size: var(--small-size); color: var(--text-muted);">How findings shaped the product roadmap</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 3: CHAPTER — MY VISION
+         ============================================= -->
+    <section class="slide chapter-slide">
+        <div class="chapter-number reveal-scale">01</div>
+        <div class="slide-content chapter-content">
+            <p class="slide-label reveal">Section One</p>
+            <h1 class="reveal reveal-delay-1">My Vision</h1>
+            <p class="subtitle reveal reveal-delay-2">The problem and what we're building to solve it.</p>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 4: THE PROBLEM — BEFORE / AFTER
+         ============================================= -->
+    <section class="slide grid-bg">
+        <div class="slide-content">
+            <p class="slide-label reveal">The Problem</p>
+            <h2 class="reveal reveal-delay-1">Manual Lead Discovery Is Broken</h2>
+
+            <div class="split-compare reveal-scale reveal-delay-2">
+                <div class="split-side split-left">
+                    <div class="split-header">Today</div>
+                    <ul class="bullet-list red">
+                        <li>Sales finds leads through trade shows & word of mouth</li>
+                        <li>Projects slip through — competitors get there first</li>
+                        <li>No way to know <strong style="color:var(--text-primary)">WHO</strong> is building a project</li>
+                        <li>Every lead in the database is <code style="font-family:var(--font-mono); color:var(--accent-red); font-size:var(--small-size);">epc_company: NULL</code></li>
+                    </ul>
+                </div>
+                <div class="split-side split-right">
+                    <div class="split-header">With This Tool</div>
+                    <ul class="bullet-list green">
+                        <li>Continuously discovers upcoming solar projects</li>
+                        <li>Identifies the EPC contractor — the actual buyer</li>
+                        <li>Delivers actionable intelligence to sales</li>
+                        <li>Leads arrive with the <strong style="color:var(--text-primary)">EPC name attached</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="insight-box reveal reveal-delay-3">
+                <p>"A lead with a known EPC is a sales conversation. A lead with better coordinates is a prettier map pin."</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 5: THREE LAYERS
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">Platform Architecture</p>
+            <h2 class="reveal reveal-delay-1">Three Layers of the Platform</h2>
+
+            <div class="three-col" style="margin-top: clamp(0.75rem, 1.5vw, 1.5rem);">
+                <div class="card reveal reveal-delay-2" style="border-top: 2px solid var(--accent);">
+                    <div class="card-label" style="color: var(--accent);">Layer 1</div>
+                    <h3>Data Ingestion</h3>
+                    <div class="divider"></div>
+                    <p>Scrape ISO queues, EIA filings, FERC records, permits, and news. Cross-reference across sources to build unified project timelines.</p>
+                </div>
+                <div class="card reveal reveal-delay-3" style="border-top: 2px solid var(--accent-warm);">
+                    <div class="card-label" style="color: var(--accent-warm);">Layer 2 — Core</div>
+                    <h3>EPC Discovery & Knowledge Graph</h3>
+                    <div class="divider" style="background: var(--accent-warm);"></div>
+                    <p>AI-powered research across 5 channels identifies the EPC contractor. A relationship database compounds over time.</p>
+                </div>
+                <div class="card reveal reveal-delay-4" style="border-top: 2px solid var(--accent-green);">
+                    <div class="card-label" style="color: var(--accent-green);">Layer 3</div>
+                    <h3>Intelligence Delivery</h3>
+                    <div class="divider" style="background: var(--accent-green);"></div>
+                    <p>Dashboard with agent chat. Slack/email alerts for high-signal events. CRM integration to push leads into sales workflow.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 6: CHAPTER — MY THINKING
+         ============================================= -->
+    <section class="slide chapter-slide">
+        <div class="chapter-number reveal-scale">02</div>
+        <div class="slide-content chapter-content">
+            <p class="slide-label reveal">Section Two</p>
+            <h1 class="reveal reveal-delay-1">My Thinking</h1>
+            <p class="subtitle reveal reveal-delay-2">The key insight that drives every design decision.</p>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 7: CORE INSIGHT — WHAT vs WHO
+         ============================================= -->
+    <section class="slide grid-bg">
+        <div class="slide-content">
+            <p class="slide-label reveal">Core Insight</p>
+            <h2 class="reveal reveal-delay-1">It's Not About <em>What</em> — It's About <em>Who</em></h2>
+
+            <div class="split-compare reveal-scale reveal-delay-2">
+                <div class="split-side split-left" style="background: rgba(99, 179, 237, 0.04);">
+                    <div class="split-header" style="color: var(--text-muted);">What Scrapers Give You</div>
+                    <ul class="bullet-list" style="margin-bottom: clamp(0.5rem, 1vw, 1rem);">
+                        <li>Developer name (financial entity)</li>
+                        <li>MW capacity</li>
+                        <li>County & state</li>
+                        <li>Queue date</li>
+                    </ul>
+                    <p style="font-size: var(--small-size); color: var(--accent-red); font-weight: 500;">→ A data dump. 2,000 rows with no one to call.</p>
+                </div>
+                <div class="split-side split-right" style="background: rgba(99, 179, 237, 0.06);">
+                    <div class="split-header" style="color: var(--accent);">What Sales Actually Needs</div>
+                    <ul class="bullet-list" style="margin-bottom: clamp(0.5rem, 1vw, 1rem);">
+                        <li><strong style="color:var(--text-primary)">The EPC contractor</strong></li>
+                        <li>The one on-site, grading land</li>
+                        <li>The one buying equipment</li>
+                        <li>The one making robot decisions</li>
+                    </ul>
+                    <p style="font-size: var(--small-size); color: var(--accent-green); font-weight: 500;">→ The EPC is the customer. No database maps projects → EPCs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 8: CHAPTER — MY RESEARCH
+         ============================================= -->
+    <section class="slide chapter-slide">
+        <div class="chapter-number reveal-scale">03</div>
+        <div class="slide-content chapter-content">
+            <p class="slide-label reveal">Section Three</p>
+            <h1 class="reveal reveal-delay-1">My Research</h1>
+            <p class="subtitle reveal reveal-delay-2">Project lifecycle mapping & EPC discovery channels.</p>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 9: PROJECT LIFECYCLE TIMELINE
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">Data Sources</p>
+            <h2 class="reveal reveal-delay-1">Project Lifecycle: When Each Source Appears</h2>
+            <p class="reveal reveal-delay-2" style="color: var(--text-muted); font-size: var(--small-size); margin-bottom: clamp(0.5rem, 1vw, 1rem);">Cross-referencing multiple sources reveals how far along a project is — a project in only the ISO queue has a 60-80% withdrawal rate. One also in EIA-860 with a FERC LGIA is almost certainly going to construction.</p>
+
+            <div class="timeline reveal reveal-delay-3">
+                <div class="timeline-item">
+                    <div class="timeline-label">3–5 yrs out</div>
+                    <div class="timeline-title">ISO Queue Entry</div>
+                    <div class="timeline-desc">Queue ID, county/state, MW, developer. Earliest public record of a project.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">2–3 yrs out</div>
+                    <div class="timeline-title">FERC LGIA Filing</div>
+                    <div class="timeline-desc">Interconnection agreement signed. Project is committed. Legal entity confirmed.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">1–2 yrs out</div>
+                    <div class="timeline-title">EIA Form 860</div>
+                    <div class="timeline-desc">Exact lat/lng, EIA plant ID, owner info, planned COD. Government-mandated filing.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">0–1 yr out</div>
+                    <div class="timeline-title">EIA 860M + News</div>
+                    <div class="timeline-desc">Construction month, actual COD. Press releases name the EPC contractor.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">Operational</div>
+                    <div class="timeline-title">USPVDB</div>
+                    <div class="timeline-desc">As-built capacity, site polygon. Validation and knowledge graph enrichment.</div>
+                </div>
+            </div>
+
+            <div class="insight-box reveal reveal-delay-4">
+                <p>The difference between "there's a solar project in Texas" and "EPC Y is about to break ground on a 250MW project at these coordinates in June 2027."</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 10: 5 EPC DISCLOSURE CHANNELS
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">EPC Discovery</p>
+            <h2 class="reveal reveal-delay-1">The 5 EPC Disclosure Channels</h2>
+            <p class="reveal reveal-delay-2" style="color: var(--text-muted); font-size: var(--small-size); margin-bottom: clamp(0.5rem, 1vw, 1rem);">No single registry maps projects to their EPC contractors. They surface through 5 different channels with different coverage, reliability, and timing.</p>
+
+            <table class="data-table reveal reveal-delay-3">
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th>Coverage</th>
+                        <th>Reliability</th>
+                        <th>Timing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="highlight">Developer Press Releases</td>
+                        <td><span class="tag tag-green">60–70%</span> of &gt;100MW</td>
+                        <td>High — first-party</td>
+                        <td>Days after financial close</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Trade Publications</td>
+                        <td><span class="tag tag-green">50–60%</span> of &gt;100MW</td>
+                        <td>High — named sources</td>
+                        <td>Days to weeks</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">EPC Company Websites</td>
+                        <td><span class="tag tag-blue">30–40%</span></td>
+                        <td>High — self-reported</td>
+                        <td>Variable (weeks–months)</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">SEC / Financial Filings</td>
+                        <td><span class="tag tag-orange">10–15%</span></td>
+                        <td>Very High — mandated</td>
+                        <td>Days to quarters</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">State Utility Filings</td>
+                        <td><span class="tag tag-orange">10–15%</span></td>
+                        <td>High — regulatory</td>
+                        <td>Weeks to months</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 11: VERIFIED EXAMPLES — SUMMARY TABLE
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">Evidence — Verified</p>
+            <h2 class="reveal reveal-delay-1">Developer → EPC Examples We Verified</h2>
+            <p class="reveal reveal-delay-2" style="color: var(--text-muted); font-size: var(--small-size); margin-bottom: clamp(0.5rem, 1vw, 1rem);">We deep-researched each claim against public sources. 3 fully verified, 2 partially verified, showing that this discovery workflow is viable across multiple channels.</p>
+
+            <table class="data-table reveal reveal-delay-3">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>MW</th>
+                        <th>Developer</th>
+                        <th>EPC</th>
+                        <th>Channel</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="highlight">Double Black Diamond Solar</td>
+                        <td>800</td>
+                        <td>Swift Current Energy</td>
+                        <td style="color: var(--accent);">McCarthy</td>
+                        <td><span class="tag tag-green">Developer PR</span></td>
+                        <td><span class="tag tag-green">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Gibson Solar</td>
+                        <td>251</td>
+                        <td>Arevon</td>
+                        <td style="color: var(--accent);">Signal Energy</td>
+                        <td><span class="tag tag-green">PR + Trade Pub</span></td>
+                        <td><span class="tag tag-green">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Elm Branch + Briar Creek</td>
+                        <td>316</td>
+                        <td>Lightsource bp</td>
+                        <td style="color: var(--accent);">McCarthy</td>
+                        <td><span class="tag tag-blue">EPC Website + PR</span></td>
+                        <td><span class="tag tag-green">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">FPL Solar + Two Creeks</td>
+                        <td>~511</td>
+                        <td>NextEra / FPL</td>
+                        <td style="color: var(--accent);">Blattner Energy</td>
+                        <td><span class="tag tag-blue">Developer PR</span></td>
+                        <td><span class="tag tag-orange">Partial</span></td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Oak Ridge + Bellefield</td>
+                        <td>200+</td>
+                        <td>AES</td>
+                        <td style="color: var(--accent);">Primoris</td>
+                        <td><span class="tag tag-purple">Trade Pub (ENR)</span></td>
+                        <td><span class="tag tag-orange">Partial</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="insight-box reveal reveal-delay-4">
+                <p>5 examples across 4 EPCs, found via 4 different channels — developer PR, EPC websites, trade publications, and state PUC filings. Each channel works.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 11B: DEEP DIVE — FULLY VERIFIED (1/2)
+         ============================================= -->
+    <section class="slide grid-bg">
+        <div class="slide-content">
+            <p class="slide-label reveal">How We Found Them</p>
+            <h2 class="reveal reveal-delay-1">Verified: Double Black Diamond & Gibson Solar</h2>
+
+            <div class="two-col" style="margin-top: clamp(0.75rem, 1.5vw, 1.25rem);">
+                <!-- Double Black Diamond -->
+                <div class="card reveal reveal-delay-2" style="border-left: 3px solid var(--accent-green);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+                        <h3 style="font-size: clamp(0.9rem, 1.5vw, 1.15rem);">Double Black Diamond Solar</h3>
+                        <span class="tag tag-green">Verified</span>
+                    </div>
+                    <p style="font-size: var(--small-size); color: var(--text-muted); margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);">800 MWdc · Swift Current Energy → McCarthy · Illinois</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem;">How Identified</div>
+                    <p style="font-size: var(--small-size); color: var(--text-secondary); margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);">Developer press release at construction start named McCarthy as EPC. Cross-confirmed on McCarthy's portfolio page and at project completion.</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem;">Key Sources</div>
+                    <ul style="font-size: var(--small-size); color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 0.15rem;">
+                        <li>· Swift Current Energy PR (Mar 2023) — construction announcement</li>
+                        <li>· McCarthy.com completion page (May 2025)</li>
+                        <li>· ENR — "McCarthy Wins Contract for IL's Largest Solar"</li>
+                        <li>· Solar Power World, Solar Builder (2025 Project of the Year)</li>
+                        <li>· FERC market-based rate filing (Apr 2024)</li>
+                    </ul>
+                </div>
+
+                <!-- Gibson Solar -->
+                <div class="card reveal reveal-delay-3" style="border-left: 3px solid var(--accent-green);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+                        <h3 style="font-size: clamp(0.9rem, 1.5vw, 1.15rem);">Gibson Solar</h3>
+                        <span class="tag tag-green">Verified</span>
+                    </div>
+                    <p style="font-size: var(--small-size); color: var(--text-muted); margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);">251 MWdc · Arevon → Signal Energy · Indiana (NIPSCO owner)</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem;">How Identified</div>
+                    <p style="font-size: var(--small-size); color: var(--text-secondary); margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);">Developer PR at groundbreaking explicitly named Signal Energy as EPC. Confirmed by trade publications and Indiana utility commission (IURC) filings.</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem;">Key Sources</div>
+                    <ul style="font-size: var(--small-size); color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 0.15rem;">
+                        <li>· Arevon PR (Aug 2024) — "Signal Energy is the EPC contractor"</li>
+                        <li>· Arevon $351M financing PR (Sep 2024)</li>
+                        <li>· PV Tech, Solar Builder, Solar Industry Mag coverage</li>
+                        <li>· IURC Cause No. 45489 / 46032 — regulatory filings</li>
+                        <li>· NiSource investor relations — original 280MW PPA (2020)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 11C: DEEP DIVE — VERIFIED + PARTIAL (2/2)
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">How We Found Them</p>
+            <h2 class="reveal reveal-delay-1">Verified & Partially Verified: 3 More Examples</h2>
+
+            <div class="three-col" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+                <!-- Lightsource bp -->
+                <div class="card reveal reveal-delay-2" style="border-left: 3px solid var(--accent-green);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.3rem;">
+                        <h3 style="font-size: clamp(0.8rem, 1.3vw, 1rem);">Lightsource bp (TX)</h3>
+                        <span class="tag tag-green" style="font-size: 0.55rem;">Verified</span>
+                    </div>
+                    <p style="font-size: var(--small-size); color: var(--text-muted); margin-bottom: 0.3rem;">316MW · Lightsource bp → McCarthy</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.2rem;">Discovery Path</div>
+                    <p style="font-size: var(--small-size); color: var(--text-secondary); margin-bottom: 0.3rem;">Found on McCarthy's portfolio page listing Elm Branch (163MW) + Briar Creek (153MW). Confirmed by $380M financing PR on BusinessWire.</p>
+
+                    <div style="font-size: var(--label-size); color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 0.15rem;">Sources</div>
+                    <ul style="font-size: var(--small-size); color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 0.1rem;">
+                        <li>· McCarthy.com project page</li>
+                        <li>· BusinessWire $380M PR (Jan 2021)</li>
+                        <li>· Lightsource bp, bp.com newsrooms</li>
+                        <li>· Solar Builder Mag</li>
+                    </ul>
+                </div>
+
+                <!-- NextEra / Blattner -->
+                <div class="card reveal reveal-delay-3" style="border-left: 3px solid var(--accent-warm);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.3rem;">
+                        <h3 style="font-size: clamp(0.8rem, 1.3vw, 1rem);">NextEra → Blattner</h3>
+                        <span class="tag tag-orange" style="font-size: 0.55rem;">Partial</span>
+                    </div>
+                    <p style="font-size: var(--small-size); color: var(--text-muted); margin-bottom: 0.3rem;">~511MW across multiple projects</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent-warm); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.2rem;">Discovery Path</div>
+                    <p style="font-size: var(--small-size); color: var(--text-secondary); margin-bottom: 0.3rem;">FPL press release named Blattner for 4×74.5MW FL plants. Nextracker confirmed Two Creeks (213MW, WI). No single ~400MW deal — it's an aggregate.</p>
+
+                    <div style="font-size: var(--label-size); color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 0.15rem;">Sources</div>
+                    <ul style="font-size: var(--small-size); color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 0.1rem;">
+                        <li>· FPL/NextEra PR (Mar 2017)</li>
+                        <li>· Nextracker Two Creeks (Nov 2020)</li>
+                        <li>· PV Magazine — Blattner #1 EPC</li>
+                        <li>· PWR 10-K mentions Blattner segment</li>
+                    </ul>
+                </div>
+
+                <!-- AES / Primoris -->
+                <div class="card reveal reveal-delay-4" style="border-left: 3px solid var(--accent-warm);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.3rem;">
+                        <h3 style="font-size: clamp(0.8rem, 1.3vw, 1rem);">AES → Primoris</h3>
+                        <span class="tag tag-orange" style="font-size: 0.55rem;">Partial</span>
+                    </div>
+                    <p style="font-size: var(--small-size); color: var(--text-muted); margin-bottom: 0.3rem;">200MW+ confirmed (LA, CA) · AZ unverified</p>
+
+                    <div style="font-size: var(--label-size); color: var(--accent-warm); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.2rem;">Discovery Path</div>
+                    <p style="font-size: var(--small-size); color: var(--text-secondary); margin-bottom: 0.3rem;">ENR reported Primoris as EPC for Oak Ridge (200MW, LA) and Bellefield (1GW, CA). AZ portfolio EPC not publicly named — plausible but unconfirmed.</p>
+
+                    <div style="font-size: var(--label-size); color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 0.15rem;">Sources</div>
+                    <ul style="font-size: var(--small-size); color: var(--text-muted); list-style: none; display: flex; flex-direction: column; gap: 0.1rem;">
+                        <li>· ENR feature article (2024)</li>
+                        <li>· AES.com AZ project pages</li>
+                        <li>· PRIM 8-Ks (don't name customer)</li>
+                        <li>· Primoris HQ: Tempe, AZ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="insight-box reveal reveal-delay-5">
+                <p>The verification process itself demonstrates the workflow: developer PRs at financial close are the highest-signal channel (~60-70% coverage), followed by EPC portfolio pages and trade publications. SEC filings confirm but rarely name both parties.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 12: CHAPTER — RESEARCH → DESIGN
+         ============================================= -->
+    <section class="slide chapter-slide">
+        <div class="chapter-number reveal-scale">04</div>
+        <div class="slide-content chapter-content">
+            <p class="slide-label reveal">Section Four</p>
+            <h1 class="reveal reveal-delay-1">Research → Product Design</h1>
+            <p class="subtitle reveal reveal-delay-2">How these findings shaped the roadmap.</p>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 13: KNOWLEDGE GRAPH
+         ============================================= -->
+    <section class="slide grid-bg">
+        <div class="slide-content">
+            <p class="slide-label reveal">The Moat</p>
+            <h2 class="reveal reveal-delay-1">Knowledge Graph: Intelligence That Compounds</h2>
+            <p class="reveal reveal-delay-2" style="color: var(--text-muted); font-size: var(--small-size); margin-bottom: clamp(0.5rem, 1vw, 1rem);">Anyone can scrape ISO queues. The developer→EPC relationship database, built over time and confirmed across multiple sources, is defensible.</p>
+
+            <div class="process-flow reveal reveal-delay-3">
+                <div class="process-step">
+                    <div class="process-step-num">Month 1</div>
+                    <h4>Seed</h4>
+                    <p>10 verified examples. Agent starts researching high-score leads.</p>
+                </div>
+                <div class="process-step" style="border-top-color: var(--accent-warm);">
+                    <div class="process-step-num" style="color: var(--accent-warm);">Month 2–3</div>
+                    <h4>Learn</h4>
+                    <p>~100 leads researched. ~30 confirmed EPC relationships. Patterns emerging.</p>
+                </div>
+                <div class="process-step" style="border-top-color: var(--accent-green);">
+                    <div class="process-step-num" style="color: var(--accent-green);">Month 6</div>
+                    <h4>Predict</h4>
+                    <p>100+ relationships. "Developer X uses EPC Y in State Z" predictions.</p>
+                </div>
+                <div class="process-step" style="border-top-color: var(--accent-purple);">
+                    <div class="process-step-num" style="color: var(--accent-purple);">Month 12+</div>
+                    <h4>Moat</h4>
+                    <p>Top 20 developers + Top 10 EPCs covered. Graph is a standalone data asset.</p>
+                </div>
+            </div>
+
+            <div class="insight-box reveal reveal-delay-4">
+                <p>"Lightsource bp has used McCarthy on their last 3 Texas projects — their new Texas project probably will too."</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 14: IMPLEMENTATION PHASES
+         ============================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <p class="slide-label reveal">Roadmap</p>
+            <h2 class="reveal reveal-delay-1">Implementation Phases</h2>
+            <p class="reveal reveal-delay-2" style="color: var(--text-muted); font-size: var(--small-size); margin-bottom: clamp(0.5rem, 1vw, 1rem);">Prioritized by lead actionability — EPC discovery before infrastructure improvements.</p>
+
+            <div class="timeline reveal reveal-delay-3">
+                <div class="timeline-item done">
+                    <div class="timeline-label">Phase 1 ✓</div>
+                    <div class="timeline-title">ISO Queues + Dashboard</div>
+                    <div class="timeline-desc">3 ISO scrapers, Supabase DB, Next.js dashboard. 500+ projects ingested.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">Phase 2 — Highest</div>
+                    <div class="timeline-title">EPC Discovery</div>
+                    <div class="timeline-desc">AI agent + knowledge graph. Core value prop. ~60% EPC identification.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">Phase 3</div>
+                    <div class="timeline-title">Agent Chat</div>
+                    <div class="timeline-desc">NL interface on dashboard. Hot leads view. Research on demand.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">Phase 4–5</div>
+                    <div class="timeline-title">Depth</div>
+                    <div class="timeline-desc">Delta tracking, more ISOs, EIA-860 cross-ref, geocoding + map.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-label">Phase 6–7</div>
+                    <div class="timeline-title">Delivery</div>
+                    <div class="timeline-desc">Slack/email alerts, CRM integration, advanced scoring with Liav.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         SLIDE 15: QUESTIONS & NEXT STEPS
+         ============================================= -->
+    <section class="slide grid-bg">
+        <div class="slide-content" style="align-items: center; text-align: center;">
+            <p class="slide-label reveal">Next Steps</p>
+            <h1 class="reveal reveal-delay-1" style="font-size: var(--h2-size);">Questions for Liav</h1>
+            <div class="divider reveal reveal-delay-2" style="margin: clamp(0.5rem, 1vw, 1rem) auto;"></div>
+
+            <div style="text-align: left; max-width: 700px; margin-top: clamp(0.5rem, 1vw, 1rem);">
+                <div style="display: flex; flex-direction: column; gap: clamp(0.5rem, 1vh, 0.8rem);">
+                    <div class="card reveal reveal-delay-2" style="display: flex; align-items: baseline; gap: 0.75rem; padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.25rem);">
+                        <span class="tag tag-blue" style="flex-shrink: 0;">1</span>
+                        <p style="font-size: var(--body-size); color: var(--text-secondary);">Validate the 10 EPC examples — do they match your industry knowledge?</p>
+                    </div>
+                    <div class="card reveal reveal-delay-3" style="display: flex; align-items: baseline; gap: 0.75rem; padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.25rem);">
+                        <span class="tag tag-blue" style="flex-shrink: 0;">2</span>
+                        <p style="font-size: var(--body-size); color: var(--text-secondary);">Target EPC profile — which EPCs are ideal customers? Any existing relationships?</p>
+                    </div>
+                    <div class="card reveal reveal-delay-4" style="display: flex; align-items: baseline; gap: 0.75rem; padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.25rem);">
+                        <span class="tag tag-blue" style="flex-shrink: 0;">3</span>
+                        <p style="font-size: var(--body-size); color: var(--text-secondary);">Target project size — is &gt;20MW the right minimum? Sweet spot for robots?</p>
+                    </div>
+                    <div class="card reveal reveal-delay-5" style="display: flex; align-items: baseline; gap: 0.75rem; padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.25rem);">
+                        <span class="tag tag-blue" style="flex-shrink: 0;">4</span>
+                        <p style="font-size: var(--body-size); color: var(--text-secondary);">Which ISOs matter most after ERCOT, CAISO, MISO?</p>
+                    </div>
+                    <div class="card reveal reveal-delay-6" style="display: flex; align-items: baseline; gap: 0.75rem; padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.25rem);">
+                        <span class="tag tag-blue" style="flex-shrink: 0;">5</span>
+                        <p style="font-size: var(--body-size); color: var(--text-secondary);">What makes a lead "actionable" vs "interesting but not ready"?</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+       PRESENTATION CONTROLLER
+       ============================================= -->
+    <script>
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.navDots = document.getElementById('navDots');
+                this.progressBar = document.getElementById('progressBar');
+                this.counter = document.getElementById('slideCounter');
+                this.currentSlide = 0;
+                this.total = this.slides.length;
+
+                this.createNavDots();
+                this.setupObserver();
+                this.setupKeyboard();
+                this.setupWheel();
+                this.setupTouch();
+                this.updateUI(0);
+            }
+
+            /* --- Nav dots --- */
+            createNavDots() {
+                this.slides.forEach((_, i) => {
+                    const dot = document.createElement('button');
+                    dot.classList.add('nav-dot');
+                    dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                    dot.addEventListener('click', () => {
+                        this.slides[i].scrollIntoView({ behavior: 'smooth' });
+                    });
+                    this.navDots.appendChild(dot);
+                });
+                this.dots = this.navDots.querySelectorAll('.nav-dot');
+            }
+
+            /* --- Intersection Observer for scroll-triggered animations --- */
+            setupObserver() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            const idx = Array.from(this.slides).indexOf(entry.target);
+                            if (idx !== -1) this.updateUI(idx);
+                        }
+                    });
+                }, { threshold: 0.5 });
+
+                this.slides.forEach(slide => observer.observe(slide));
+            }
+
+            /* --- Keyboard navigation --- */
+            setupKeyboard() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+                        e.preventDefault();
+                        this.goTo(Math.min(this.currentSlide + 1, this.total - 1));
+                    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        this.goTo(Math.max(this.currentSlide - 1, 0));
+                    }
+                });
+            }
+
+            /* --- Mouse wheel navigation with debounce --- */
+            setupWheel() {
+                let lastWheel = 0;
+                document.addEventListener('wheel', (e) => {
+                    const now = Date.now();
+                    if (now - lastWheel < 800) return;
+                    lastWheel = now;
+
+                    if (e.deltaY > 0) {
+                        this.goTo(Math.min(this.currentSlide + 1, this.total - 1));
+                    } else if (e.deltaY < 0) {
+                        this.goTo(Math.max(this.currentSlide - 1, 0));
+                    }
+                }, { passive: true });
+            }
+
+            /* --- Touch / swipe support --- */
+            setupTouch() {
+                let touchStartY = 0;
+                document.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                }, { passive: true });
+
+                document.addEventListener('touchend', (e) => {
+                    const diff = touchStartY - e.changedTouches[0].clientY;
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) {
+                            this.goTo(Math.min(this.currentSlide + 1, this.total - 1));
+                        } else {
+                            this.goTo(Math.max(this.currentSlide - 1, 0));
+                        }
+                    }
+                }, { passive: true });
+            }
+
+            /* --- Navigate to a specific slide --- */
+            goTo(index) {
+                this.slides[index].scrollIntoView({ behavior: 'smooth' });
+            }
+
+            /* --- Update progress bar, dots, counter --- */
+            updateUI(index) {
+                this.currentSlide = index;
+
+                /* Progress */
+                const pct = ((index + 1) / this.total) * 100;
+                this.progressBar.style.width = pct + '%';
+
+                /* Dots */
+                this.dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === index);
+                });
+
+                /* Counter */
+                const num = String(index + 1).padStart(2, '0');
+                const tot = String(this.total).padStart(2, '0');
+                this.counter.textContent = `${num} / ${tot}`;
+            }
+        }
+
+        /* --- Initialize when DOM is ready --- */
+        document.addEventListener('DOMContentLoaded', () => {
+            new SlidePresentation();
+        });
+    </script>
+
+</body>
+</html>

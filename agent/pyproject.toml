@@ -1,0 +1,20 @@
+[project]
+name = "epc-discovery-agent"
+version = "0.1.0"
+description = "Claude-powered EPC discovery agent for solar projects"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.49.0",
+    "tavily-python>=0.5.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "supabase>=2.13.0",
+    "python-dotenv>=1.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest", "pytest-asyncio", "httpx"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
