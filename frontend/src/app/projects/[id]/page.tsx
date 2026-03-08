@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { EpcDiscovery, EpcSource } from "@/lib/types";
+import ResearchButton from "@/components/epc/ResearchButton";
 
 export const revalidate = 3600;
 
@@ -218,9 +219,12 @@ export default async function ProjectDetailPage({
 
       {/* EPC Discovery */}
       <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
-          EPC Discovery
-        </h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            EPC Discovery
+          </h2>
+          <ResearchButton projectId={project.id} hasExisting={!!activeDiscovery} />
+        </div>
         {activeDiscovery ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -311,6 +315,51 @@ export default async function ProjectDetailPage({
             No EPC discovery results for this project yet.
           </p>
         )}
+      </div>
+
+      {/* Data Source */}
+      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+          Data Source
+        </h2>
+        <div className="flex flex-col gap-3 text-sm">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-blue-400" />
+            <div>
+              <p className="font-medium text-slate-700">
+                {project.source === "gem_tracker"
+                  ? "Global Energy Monitor — GEM Tracker"
+                  : `${project.iso_region} Interconnection Queue`}
+              </p>
+              <p className="mt-0.5 text-slate-500">
+                {project.source === "gem_tracker"
+                  ? "Global database of power plants tracking capacity, ownership, and development status."
+                  : `Official interconnection queue data from ${project.iso_region}. Includes queue position, capacity, fuel type, developer, and expected commercial operation date.`}
+              </p>
+            </div>
+          </div>
+          {activeDiscovery && (
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+              <div>
+                <p className="font-medium text-slate-700">
+                  EPC Discovery Agent
+                </p>
+                <p className="mt-0.5 text-slate-500">
+                  AI-powered research using web search across trade publications, press releases, permit filings, and regulatory documents.
+                  {activeDiscovery.sources.length > 0 && (
+                    <span>
+                      {" "}Found {activeDiscovery.sources.length} source{activeDiscovery.sources.length !== 1 ? "s" : ""}.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+          <p className="mt-1 text-xs text-slate-400">
+            Last updated {formatDate(project.updated_at)}
+          </p>
+        </div>
       </div>
 
       {/* Raw Data (collapsible) */}

@@ -31,7 +31,7 @@ export default async function PipelinePage({
       .select("*")
       .eq("status", "success")
       .order("completed_at", { ascending: false })
-      .limit(3),
+      .limit(10),
   ]);
 
   if (projectsResult.error) {
@@ -65,6 +65,7 @@ export default async function PipelinePage({
       ) : (
         <Dashboard
           initialProjects={projectsResult.data || []}
+          discoveries={discoveriesResult.data || []}
           lastRuns={runsResult.data || []}
         />
       )}

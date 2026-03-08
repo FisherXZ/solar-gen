@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Project, ScrapeRun, Filters } from "@/lib/types";
+import { Project, EpcDiscovery, ScrapeRun, Filters } from "@/lib/types";
 import StatsCards from "./StatsCards";
 import FilterBar from "./FilterBar";
 import ProjectsTable, { SortField } from "./ProjectsTable";
@@ -23,10 +23,11 @@ const DEFAULT_FILTERS: Filters = {
 
 interface DashboardProps {
   initialProjects: Project[];
+  discoveries: EpcDiscovery[];
   lastRuns: ScrapeRun[];
 }
 
-export default function Dashboard({ initialProjects, lastRuns }: DashboardProps) {
+export default function Dashboard({ initialProjects, discoveries, lastRuns }: DashboardProps) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sortField, setSortField] = useState<SortField>("lead_score");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -106,7 +107,7 @@ export default function Dashboard({ initialProjects, lastRuns }: DashboardProps)
 
   return (
     <div className="flex flex-col gap-6">
-      <StatsCards projects={filtered} lastRuns={lastRuns} />
+      <StatsCards projects={filtered} discoveries={discoveries} lastRuns={lastRuns} />
       <FilterBar filters={filters} onChange={handleFilterChange} states={states} />
       <ProjectsTable
         projects={sorted}

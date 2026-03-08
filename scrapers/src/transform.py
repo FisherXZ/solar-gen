@@ -165,6 +165,24 @@ def transform_caiso(sheets: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame(all_rows)
 
 
+US_STATE_ABBREV = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
+    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
+    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
+    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
+    "Vermont": "VT", "Virginia": "VA", "Washington": "WA", "West Virginia": "WV",
+    "Wisconsin": "WI", "Wyoming": "WY", "District of Columbia": "DC",
+    "Puerto Rico": "PR", "Guam": "GU", "American Samoa": "AS",
+    "U.S. Virgin Islands": "VI", "Northern Mariana Islands": "MP",
+}
+
 GEM_STATUS_MAP = {
     "construction": "under_construction",
     "pre-construction": "pre_construction",
@@ -204,7 +222,7 @@ def transform_gem(features: list[dict]) -> pd.DataFrame:
             "iso_region": "GEM",
             "project_name": props.get("name") or None,
             "developer": owner,
-            "state": props.get("subnat") or None,
+            "state": US_STATE_ABBREV.get(props.get("subnat", ""), props.get("subnat")) or None,
             "county": None,
             "latitude": coords[1] if len(coords) >= 2 and coords[1] else None,
             "longitude": coords[0] if len(coords) >= 2 and coords[0] else None,

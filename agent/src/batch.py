@@ -66,7 +66,7 @@ async def _research_one(
 async def run_batch(
     projects: list[dict],
     on_progress: Callable[[dict], Awaitable[None]],
-    concurrency: int = 3,
+    concurrency: int = 10,
 ) -> list[dict]:
     """Run EPC discovery on multiple projects concurrently.
 
