@@ -8,6 +8,7 @@ import GuidanceCard from "./parts/GuidanceCard";
 import CsvCard from "./parts/CsvCard";
 import PdfCard from "./parts/PdfCard";
 import ProgressNotificationCard from "./parts/ProgressNotificationCard";
+import DiscoveryApprovalCard from "./parts/DiscoveryApprovalCard";
 import CollapsibleToolCard from "./CollapsibleToolCard";
 import ToolIcon from "./ToolIcon";
 
@@ -62,6 +63,9 @@ function getProgressLabel(toolName: string, input?: Record<string, unknown>): st
     remember: "Saving to memory...",
     recall: "Recalling memories...",
     request_guidance: "Asking for your input...",
+    request_discovery_review: "Presenting finding for review...",
+    approve_discovery: (inp) =>
+      inp?.action === "rejected" ? "Rejecting discovery..." : "Approving discovery...",
     notify_progress: (inp) => {
       const stage = String(inp?.stage || "").replace("_", " ");
       return inp?.message ? `${stage}: ${inp.message}` : `Progress: ${stage}`;
@@ -128,6 +132,16 @@ function getDoneLabel(
     }
     case "request_guidance":
       return "Asked for your input";
+    case "request_discovery_review":
+      return data.epc_contractor
+        ? `Review: ${data.epc_contractor} (${data.confidence || "unknown"})`
+        : "Discovery ready for review";
+    case "approve_discovery":
+      return data.status === "accepted"
+        ? `Accepted: ${data.epc_contractor || "discovery"}`
+        : data.status === "rejected"
+          ? "Discovery rejected"
+          : "Processing review...";
     case "notify_progress": {
       const stage = String(input?.stage || "").replace("_", " ");
       return data.message ? `${stage}: ${data.message}` : `Progress: ${stage}`;
@@ -162,6 +176,7 @@ const EXPAND_WHEN_DONE = new Set([
   "batch_research_epc",
   "get_discoveries",
   "request_guidance",
+  "request_discovery_review",
   "export_csv",
 ]);
 
@@ -224,6 +239,9 @@ function renderToolBody(
 
     case "notify_progress":
       return <ProgressNotificationCard data={data as { stage?: string; message?: string; detail?: string }} />;
+
+    case "request_discovery_review":
+      return <DiscoveryApprovalCard data={data as { discovery_id?: string; epc_contractor?: string; confidence?: string; source_summary?: string[]; assessment?: string; awaiting_review?: boolean; error?: string }} />;
 
     case "fetch_page": {
       if (data.content_type === "pdf") {

@@ -1,22 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { Suspense } from "react";
-import Dashboard from "@/components/Dashboard";
 import EpcDiscoveryDashboard from "@/components/epc/EpcDiscoveryDashboard";
-import PipelineTabs from "@/components/PipelineTabs";
 
 export const revalidate = 3600;
 
-export default async function PipelinePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const { tab } = await searchParams;
-  const activeTab = tab || "projects";
-
+export default async function PipelinePage() {
   const supabase = await createClient();
 
-  const [projectsResult, discoveriesResult, runsResult] = await Promise.all([
+  const [projectsResult, discoveriesResult] = await Promise.all([
     supabase
       .from("projects")
       .select("*", { count: "exact" })
@@ -26,12 +16,6 @@ export default async function PipelinePage({
       .from("epc_discoveries")
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("scrape_runs")
-      .select("*")
-      .eq("status", "success")
-      .order("completed_at", { ascending: false })
-      .limit(10),
   ]);
 
   if (projectsResult.error) {
@@ -52,23 +36,10 @@ export default async function PipelinePage({
           Utility-scale solar projects from ISO interconnection queues
         </p>
       </div>
-
-      <Suspense>
-        <PipelineTabs />
-      </Suspense>
-
-      {activeTab === "epc" ? (
-        <EpcDiscoveryDashboard
-          projects={projectsResult.data || []}
-          discoveries={discoveriesResult.data || []}
-        />
-      ) : (
-        <Dashboard
-          initialProjects={projectsResult.data || []}
-          discoveries={discoveriesResult.data || []}
-          lastRuns={runsResult.data || []}
-        />
-      )}
+      <EpcDiscoveryDashboard
+        projects={projectsResult.data || []}
+        discoveries={discoveriesResult.data || []}
+      />
     </main>
   );
 }

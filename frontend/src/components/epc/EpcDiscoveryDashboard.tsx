@@ -1,30 +1,57 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Project, EpcDiscovery, EpcFilter } from "@/lib/types";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Project, EpcDiscovery, ConstructionStatus } from "@/lib/types";
 import ConfidenceBadge from "./ConfidenceBadge";
-import SourceCard from "./SourceCard";
 
 interface EpcDiscoveryDashboardProps {
   projects: Project[];
   discoveries: EpcDiscovery[];
 }
 
-interface BatchProgress {
-  completed: number;
-  total: number;
-  currentProject: string;
-}
+type SortField =
+  | "lead_score"
+  | "project_name"
+  | "epc_contractor"
+  | "confidence"
+  | "review_status"
+  | "construction_status"
+  | "queue_date"
+  | "expected_cod";
+
+type ResearchStatus = "idle" | "planning" | "plan_ready" | "researching" | "done" | "error";
+
+const PAGE_SIZE = 25;
 
 const AGENT_API_URL =
   process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
 
-const FILTER_TABS: { key: EpcFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "needs_research", label: "Needs Research" },
-  { key: "has_epc", label: "Has EPC" },
-  { key: "pending_review", label: "Pending Review" },
-];
+const CONSTRUCTION_LABELS: Record<string, string> = {
+  unknown: "Unknown",
+  pre_construction: "Pre-Construction",
+  under_construction: "Under Construction",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const CONFIDENCE_ORDER: Record<string, number> = {
+  confirmed: 0,
+  likely: 1,
+  possible: 2,
+  unknown: 3,
+};
+
+const ERROR_MESSAGES: Record<string, string> = {
+  api_key_missing: "API key not configured.",
+  anthropic_error: "AI service error. Try again shortly.",
+  search_tool_error: "Search tools are down. Try again later.",
+  max_iterations: "Research timed out.",
+  no_report: "Agent finished without findings. Try again.",
+  db_error: "Database error.",
+  unknown: "An unexpected error occurred.",
+};
 
 function getDiscoveryForProject(
   projectId: string,
@@ -33,40 +60,126 @@ function getDiscoveryForProject(
   return discoveries.find((d) => d.project_id === projectId);
 }
 
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  let bg = "bg-red-100 text-red-700";
+  if (score >= 70) bg = "bg-emerald-100 text-emerald-700";
+  else if (score >= 40) bg = "bg-amber-100 text-amber-700";
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${bg}`}
+    >
+      {score}
+    </span>
+  );
+}
+
+function ConstructionPill({ status }: { status: ConstructionStatus }) {
+  const cls: Record<string, string> = {
+    pre_construction: "bg-amber-50 text-amber-700",
+    under_construction: "bg-blue-50 text-blue-700",
+    completed: "bg-emerald-50 text-emerald-700",
+    cancelled: "bg-red-50 text-red-600",
+    unknown: "bg-slate-100 text-slate-500",
+  };
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${cls[status] || cls.unknown}`}
+    >
+      {CONSTRUCTION_LABELS[status] || "Unknown"}
+    </span>
+  );
+}
+
+function parseErrorMessage(status: number, body: string): string {
+  try {
+    const json = JSON.parse(body);
+    if (json.error_category)
+      return ERROR_MESSAGES[json.error_category] || json.detail || "";
+    if (json.detail)
+      return typeof json.detail === "string"
+        ? json.detail.slice(0, 120)
+        : String(json.detail);
+  } catch {
+    /* not JSON */
+  }
+  if (status === 401) return ERROR_MESSAGES.api_key_missing;
+  if (status === 429) return "Rate limited. Wait a moment.";
+  return `Request failed (${status})`;
+}
+
 export default function EpcDiscoveryDashboard({
   projects,
   discoveries: initialDiscoveries,
 }: EpcDiscoveryDashboardProps) {
   const [discoveries, setDiscoveries] =
     useState<EpcDiscovery[]>(initialDiscoveries);
-  const [activeFilter, setActiveFilter] = useState<EpcFilter>("all");
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterSource, setFilterSource] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [isResearching, setIsResearching] = useState(false);
-  const [researchingId, setResearchingId] = useState<string | null>(null);
+  const [filterState, setFilterState] = useState("");
+  const [filterResearch, setFilterResearch] = useState("");
+  const [filterConstruction, setFilterConstruction] = useState("");
+  const [codYearFrom, setCodYearFrom] = useState(0);
+  const [codYearTo, setCodYearTo] = useState(0);
 
-  // Batch state
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
-  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(
-    null
-  );
-  const abortRef = useRef<AbortController | null>(null);
+  // Sort
+  const [sortField, setSortField] = useState<SortField>("lead_score");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  // Pagination
+  const [page, setPage] = useState(0);
 
-  // Filter + search
+  // Expanded research plan row
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Unique states for dropdown
+  const states = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of projects) {
+      if (p.state) set.add(p.state);
+    }
+    return Array.from(set).sort();
+  }, [projects]);
+
+  // Filter
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
-      // Source filter
-      if (filterSource && project.source !== filterSource) return false;
+      if (filterState && (project.state || "") !== filterState) return false;
+
+      if (filterConstruction) {
+        if ((project.construction_status || "unknown") !== filterConstruction)
+          return false;
+      }
+
+      if (codYearFrom || codYearTo) {
+        const codYear = project.expected_cod
+          ? new Date(project.expected_cod).getFullYear()
+          : null;
+        if (!codYear) return false;
+        if (codYearFrom && codYear < codYearFrom) return false;
+        if (codYearTo && codYear > codYearTo) return false;
+      }
+
+      const discovery = getDiscoveryForProject(project.id, discoveries);
+      if (filterResearch) {
+        if (filterResearch === "needs_research") {
+          if (discovery && discovery.review_status !== "rejected") return false;
+        } else if (filterResearch === "pending") {
+          if (discovery?.review_status !== "pending") return false;
+        } else if (filterResearch === "reviewed") {
+          if (discovery?.review_status !== "accepted") return false;
+        }
+      }
 
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -76,406 +189,320 @@ export default function EpcDiscoveryDashboard({
           project.queue_id,
           project.epc_company,
           project.state,
+          discovery?.epc_contractor,
         ];
         if (!fields.some((f) => (f || "").toLowerCase().includes(q)))
           return false;
       }
 
-      const discovery = getDiscoveryForProject(project.id, discoveries);
+      return true;
+    });
+  }, [
+    projects,
+    discoveries,
+    filterState,
+    filterResearch,
+    filterConstruction,
+    codYearFrom,
+    codYearTo,
+    searchQuery,
+  ]);
 
-      switch (activeFilter) {
-        case "needs_research":
-          return !discovery || discovery.review_status === "rejected";
-        case "has_epc":
-          return discovery?.review_status === "accepted";
-        case "pending_review":
-          return discovery?.review_status === "pending";
-        default:
-          return true;
+  // Sort
+  const sorted = useMemo(() => {
+    const arr = [...filteredProjects];
+    arr.sort((a, b) => {
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+
+      if (
+        sortField === "epc_contractor" ||
+        sortField === "confidence" ||
+        sortField === "review_status"
+      ) {
+        const aDisc = getDiscoveryForProject(a.id, discoveries);
+        const bDisc = getDiscoveryForProject(b.id, discoveries);
+        if (sortField === "confidence") {
+          aVal = aDisc ? CONFIDENCE_ORDER[aDisc.confidence] ?? 4 : 4;
+          bVal = bDisc ? CONFIDENCE_ORDER[bDisc.confidence] ?? 4 : 4;
+        } else {
+          aVal = aDisc?.[sortField] ?? null;
+          bVal = bDisc?.[sortField] ?? null;
+        }
+      } else {
+        aVal = a[sortField] as string | number | null;
+        bVal = b[sortField] as string | number | null;
       }
+
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [projects, discoveries, activeFilter, searchQuery, filterSource]);
+    return arr;
+  }, [filteredProjects, sortField, sortDir, discoveries]);
 
-  // Tab counts
-  const tabCounts = useMemo(() => {
-    const counts = { all: projects.length, needs_research: 0, has_epc: 0, pending_review: 0 };
-    for (const p of projects) {
-      const d = getDiscoveryForProject(p.id, discoveries);
-      if (!d || d.review_status === "rejected") counts.needs_research++;
-      else if (d.review_status === "accepted") counts.has_epc++;
-      else if (d.review_status === "pending") counts.pending_review++;
-    }
-    return counts;
-  }, [projects, discoveries]);
+  // Paginate
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const pageProjects = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  // Checkbox handlers
-  const handleToggleCheck = useCallback((projectId: string) => {
-    setCheckedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(projectId)) next.delete(projectId);
-      else next.add(projectId);
-      return next;
-    });
-  }, []);
-
-  const filteredIds = useMemo(
-    () => filteredProjects.map((p) => p.id),
-    [filteredProjects]
-  );
-  const allChecked =
-    filteredProjects.length > 0 &&
-    filteredProjects.every((p) => checkedIds.has(p.id));
-
-  function handleToggleAll() {
-    if (allChecked) {
-      setCheckedIds((prev) => {
-        const next = new Set(prev);
-        for (const id of filteredIds) next.delete(id);
-        return next;
-      });
+  function handleSort(field: SortField) {
+    if (field === sortField) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setCheckedIds((prev) => {
-        const next = new Set(prev);
-        for (const id of filteredIds) next.add(id);
-        return next;
-      });
-    }
-  }
-
-  // Single research
-  async function handleResearch(projectId: string) {
-    setIsResearching(true);
-    setResearchingId(projectId);
-    try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `Request failed with status ${res.status}`);
-      }
-
-      const newDiscovery: EpcDiscovery = await res.json();
-      setDiscoveries((prev) => [newDiscovery, ...prev]);
-      // Auto-expand to show the result
-      setExpandedIds((prev) => new Set(prev).add(projectId));
-    } catch (err) {
-      console.error("Research failed:", err);
-      alert(
-        `Research failed: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
-    } finally {
-      setIsResearching(false);
-      setResearchingId(null);
-    }
-  }
-
-  // Batch research via SSE
-  async function handleBatchResearch() {
-    const ids = Array.from(checkedIds);
-    if (ids.length === 0) return;
-
-    const abort = new AbortController();
-    abortRef.current = abort;
-    setBatchProgress({ completed: 0, total: ids.length, currentProject: "" });
-    setIsResearching(true);
-
-    try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover/batch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_ids: ids }),
-        signal: abort.signal,
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `Batch request failed: ${res.status}`);
-      }
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6);
-          if (!jsonStr) continue;
-
-          try {
-            const event = JSON.parse(jsonStr);
-
-            if (event.type === "started") {
-              setBatchProgress({
-                completed: event.completed,
-                total: event.total,
-                currentProject: event.project_name || "",
-              });
-            } else if (event.type === "completed") {
-              setBatchProgress({
-                completed: event.completed,
-                total: event.total,
-                currentProject: "",
-              });
-              if (event.discovery) {
-                setDiscoveries((prev) => [event.discovery, ...prev]);
-              }
-            } else if (event.type === "skipped" || event.type === "error") {
-              setBatchProgress({
-                completed: event.completed,
-                total: event.total,
-                currentProject: "",
-              });
-            }
-          } catch {
-            // skip malformed JSON
-          }
-        }
-      }
-
-      setCheckedIds(new Set());
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        console.error("Batch research failed:", err);
-        alert(
-          `Batch failed: ${err instanceof Error ? err.message : "Unknown error"}`
-        );
-      }
-    } finally {
-      setIsResearching(false);
-      setBatchProgress(null);
-      abortRef.current = null;
-    }
-  }
-
-  // Review handler
-  async function handleReview(
-    discoveryId: string,
-    action: "accepted" | "rejected"
-  ) {
-    try {
-      const res = await fetch(
-        `${AGENT_API_URL}/api/discover/${discoveryId}/review`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
-        }
-      );
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `Request failed with status ${res.status}`);
-      }
-
-      setDiscoveries((prev) =>
-        prev.map((d) =>
-          d.id === discoveryId ? { ...d, review_status: action } : d
-        )
-      );
-    } catch (err) {
-      console.error("Review failed:", err);
-      alert(
-        `Review failed: ${err instanceof Error ? err.message : "Unknown error"}`
+      setSortField(field);
+      setSortDir(
+        field === "lead_score" || field === "confidence" ? "desc" : "asc"
       );
     }
+    setPage(0);
   }
+
+  function updateFilter<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setter(v);
+      setPage(0);
+    };
+  }
+
+  function handleDiscoveryCreated(d: EpcDiscovery) {
+    setDiscoveries((prev) => [d, ...prev]);
+  }
+
+  const COLUMNS: {
+    key: SortField;
+    label: string;
+  }[] = [
+    { key: "lead_score", label: "Score" },
+    { key: "project_name", label: "Project" },
+    { key: "epc_contractor", label: "EPC Contractor" },
+    { key: "confidence", label: "Confidence" },
+    { key: "review_status", label: "Status" },
+    { key: "construction_status", label: "Status" },
+    { key: "queue_date", label: "Queue Date" },
+    { key: "expected_cod", label: "Expected COD" },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar: filters + search + batch */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveFilter(tab.key)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                activeFilter === tab.key
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {tab.label}
-              <span className="ml-1.5 text-xs opacity-60">
-                {tabCounts[tab.key].toLocaleString()}
-              </span>
-            </button>
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          value={filterState}
+          onChange={(e) => updateFilter(setFilterState)(e.target.value)}
+        >
+          <option value="">All States</option>
+          {states.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-          >
-            <option value="">All Sources</option>
-            <option value="iso_queue">ISO Queues</option>
-            <option value="gem_tracker">GEM Tracker</option>
-          </select>
-          {checkedIds.size > 0 && (
-            <button
-              onClick={handleBatchResearch}
-              disabled={isResearching}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-            >
-              Research Selected ({checkedIds.size})
-            </button>
-          )}
-          <input
-            type="text"
-            placeholder="Search..."
-            className="h-8 w-56 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+        </select>
 
-      {/* Batch progress */}
-      {batchProgress && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <div className="mb-1.5 flex items-center justify-between text-sm">
-            <span className="font-medium text-blue-900">
-              Batch: {batchProgress.completed}/{batchProgress.total}
-            </span>
-            {batchProgress.currentProject && (
-              <span className="text-blue-600 text-xs">
-                Researching: {batchProgress.currentProject}
-              </span>
-            )}
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-blue-200">
-            <div
-              className="h-full rounded-full bg-blue-600 transition-all duration-300"
-              style={{
-                width: `${batchProgress.total > 0 ? (batchProgress.completed / batchProgress.total) * 100 : 0}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
+        <select
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          value={filterResearch}
+          onChange={(e) => updateFilter(setFilterResearch)(e.target.value)}
+        >
+          <option value="">All Research</option>
+          <option value="needs_research">Needs Research</option>
+          <option value="pending">Pending Review</option>
+          <option value="reviewed">Reviewed</option>
+        </select>
+
+        <select
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          value={filterConstruction}
+          onChange={(e) => updateFilter(setFilterConstruction)(e.target.value)}
+        >
+          <option value="">All Construction</option>
+          <option value="pre_construction">Pre-Construction</option>
+          <option value="under_construction">Under Construction</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="unknown">Unknown</option>
+        </select>
+
+        <select
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          value={codYearFrom || ""}
+          onChange={(e) =>
+            updateFilter(setCodYearFrom)(Number(e.target.value) || 0)
+          }
+        >
+          <option value="">COD From</option>
+          {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          value={codYearTo || ""}
+          onChange={(e) =>
+            updateFilter(setCodYearTo)(Number(e.target.value) || 0)
+          }
+        >
+          <option value="">COD To</option>
+          {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="text"
+          placeholder="Search..."
+          className="h-8 w-56 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          value={searchQuery}
+          onChange={(e) => updateFilter(setSearchQuery)(e.target.value)}
+        />
+      </div>
 
       {/* Table */}
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="w-10 px-3 py-3">
-                <input
-                  type="checkbox"
-                  checked={allChecked}
-                  onChange={handleToggleAll}
-                  className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">
-                Project
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">
-                EPC Contractor
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">
-                Confidence
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">
-                Status
-              </th>
-              <th className="w-28 px-4 py-3 text-right font-medium text-slate-600">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProjects.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-12 text-center text-slate-400"
-                >
-                  No projects match the current filters.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                {COLUMNS.map((col) => (
+                  <th
+                    key={col.key}
+                    className="cursor-pointer select-none whitespace-nowrap px-4 py-3 text-left font-medium text-slate-600 hover:text-slate-900"
+                    onClick={() => handleSort(col.key)}
+                  >
+                    {col.label}
+                    {sortField === col.key && (
+                      <span className="ml-1">
+                        {sortDir === "asc" ? "↑" : "↓"}
+                      </span>
+                    )}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              filteredProjects.map((project) => {
-                const discovery = getDiscoveryForProject(
-                  project.id,
-                  discoveries
-                );
-                const isExpanded = expandedIds.has(project.id);
-                const isChecked = checkedIds.has(project.id);
-                const isThisResearching =
-                  isResearching && researchingId === project.id;
+            </thead>
+            <tbody>
+              {pageProjects.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={COLUMNS.length}
+                    className="px-4 py-12 text-center text-slate-400"
+                  >
+                    No projects match the current filters.
+                  </td>
+                </tr>
+              ) : (
+                pageProjects.map((project) => {
+                  const discovery = getDiscoveryForProject(
+                    project.id,
+                    discoveries
+                  );
 
-                return (
-                  <ResearchRow
-                    key={project.id}
-                    project={project}
-                    discovery={discovery}
-                    isExpanded={isExpanded}
-                    isChecked={isChecked}
-                    isResearching={isThisResearching}
-                    batchRunning={isResearching}
-                    onToggleExpand={() => toggleExpand(project.id)}
-                    onToggleCheck={() => handleToggleCheck(project.id)}
-                    onResearch={() => handleResearch(project.id)}
-                    onReview={handleReview}
-                  />
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                  return (
+                    <ProjectRow
+                      key={project.id}
+                      project={project}
+                      discovery={discovery}
+                      isExpanded={expandedId === project.id}
+                      onToggleExpand={() =>
+                        setExpandedId(
+                          expandedId === project.id ? null : project.id
+                        )
+                      }
+                      onDiscoveryCreated={handleDiscoveryCreated}
+                      columnCount={COLUMNS.length}
+                    />
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+          <p className="text-sm text-slate-500">
+            {sorted.length > 0
+              ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sorted.length)} of ${sorted.length.toLocaleString()}`
+              : "0 results"}
+          </p>
+          <div className="flex gap-2">
+            <button
+              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 0}
+            >
+              Previous
+            </button>
+            <button
+              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages - 1}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
-
-      {/* Result count */}
-      <p className="text-xs text-slate-400">
-        {filteredProjects.length.toLocaleString()} projects
-      </p>
     </div>
   );
 }
 
 // --------------------------------------------------
-// Inline row component
+// Row component with inline plan-first research
 // --------------------------------------------------
 
-function ResearchRow({
+const Spinner = ({ className = "h-3 w-3" }: { className?: string }) => (
+  <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none">
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    />
+  </svg>
+);
+
+function ProjectRow({
   project,
   discovery,
   isExpanded,
-  isChecked,
-  isResearching,
-  batchRunning,
   onToggleExpand,
-  onToggleCheck,
-  onResearch,
-  onReview,
+  onDiscoveryCreated,
+  columnCount,
 }: {
   project: Project;
   discovery: EpcDiscovery | undefined;
   isExpanded: boolean;
-  isChecked: boolean;
-  isResearching: boolean;
-  batchRunning: boolean;
   onToggleExpand: () => void;
-  onToggleCheck: () => void;
-  onResearch: () => void;
-  onReview: (id: string, action: "accepted" | "rejected") => void;
+  onDiscoveryCreated: (d: EpcDiscovery) => void;
+  columnCount: number;
 }) {
+  const router = useRouter();
+  const [researchStatus, setResearchStatus] = useState<ResearchStatus>("idle");
+  const [plan, setPlan] = useState("");
+  const [result, setResult] = useState<{
+    epc_contractor?: string;
+    confidence?: string;
+    id?: string;
+  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const reviewBadge = discovery ? (
     <span
       className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
@@ -492,23 +519,79 @@ function ResearchRow({
     <span className="text-xs text-slate-300">—</span>
   );
 
+  async function handleStartPlan() {
+    setResearchStatus("planning");
+    setErrorMessage("");
+    onToggleExpand(); // expand the row
+    try {
+      const res = await fetch(`${AGENT_API_URL}/api/discover/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: project.id }),
+      });
+      if (!res.ok) {
+        setErrorMessage(parseErrorMessage(res.status, await res.text()));
+        setResearchStatus("error");
+        return;
+      }
+      const data = await res.json();
+      setPlan(data.plan || "No plan generated.");
+      setResearchStatus("plan_ready");
+    } catch {
+      setErrorMessage("Network error. Check your connection.");
+      setResearchStatus("error");
+    }
+  }
+
+  async function handleExecute() {
+    setResearchStatus("researching");
+    setErrorMessage("");
+    try {
+      const res = await fetch(`${AGENT_API_URL}/api/discover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, plan }),
+      });
+      if (!res.ok) {
+        setErrorMessage(parseErrorMessage(res.status, await res.text()));
+        setResearchStatus("error");
+        return;
+      }
+      const data = await res.json();
+      setResult(data);
+      setResearchStatus("done");
+      if (data.id) {
+        onDiscoveryCreated(data);
+      }
+      router.refresh();
+    } catch {
+      setErrorMessage("Network error. Check your connection.");
+      setResearchStatus("error");
+    }
+  }
+
+  function handleCancel() {
+    setResearchStatus("idle");
+    setPlan("");
+    setResult(null);
+    setErrorMessage("");
+    if (isExpanded) onToggleExpand();
+  }
+
+  // Determine the subtle research button text/state
+  const isActive =
+    researchStatus !== "idle" && researchStatus !== "done";
+
   return (
     <>
+      {/* Main data row — clicks navigate to detail page */}
       <tr
-        onClick={discovery ? onToggleExpand : undefined}
-        className={`border-b border-slate-100 transition-colors ${
-          discovery ? "cursor-pointer hover:bg-slate-50" : ""
-        } ${isExpanded ? "bg-slate-50" : ""}`}
+        onClick={() => router.push(`/projects/${project.id}`)}
+        className="cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50"
       >
-        {/* Checkbox */}
-        <td className="px-3 py-3">
-          <input
-            type="checkbox"
-            checked={isChecked}
-            onClick={(e) => e.stopPropagation()}
-            onChange={onToggleCheck}
-            className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-          />
+        {/* Score */}
+        <td className="px-4 py-3">
+          <ScoreBadge score={project.lead_score} />
         </td>
 
         {/* Project */}
@@ -552,110 +635,126 @@ function ResearchRow({
         {/* Review Status */}
         <td className="px-4 py-3">{reviewBadge}</td>
 
-        {/* Action */}
-        <td className="px-4 py-3 text-right">
-          {isResearching ? (
-            <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-400">
-              <svg
-                className="h-3 w-3 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Researching
-            </span>
-          ) : discovery ? (
+        {/* Construction Status */}
+        <td className="px-4 py-3">
+          <ConstructionPill status={project.construction_status} />
+        </td>
+
+        {/* Queue Date */}
+        <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+          {formatDate(project.queue_date)}
+        </td>
+
+        {/* Expected COD */}
+        <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+          {formatDate(project.expected_cod)}
+        </td>
+      </tr>
+
+      {/* Research action row — sits below the data row */}
+      <tr className="border-b border-slate-200">
+        <td colSpan={columnCount} className="px-4 py-1.5">
+          {researchStatus === "idle" && !isExpanded && !discovery && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onResearch();
+                handleStartPlan();
               }}
-              disabled={batchRunning}
-              className="group relative inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-40"
-              title="Run research again"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100"
             >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              Research EPC
+            </button>
+          )}
+          {researchStatus === "idle" && !isExpanded && discovery && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
-              <span className="group-hover:hidden">Done</span>
-              <span className="hidden group-hover:inline">Research</span>
-            </button>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onResearch();
-              }}
-              disabled={batchRunning}
-              className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-40"
-            >
-              Research
-            </button>
+              Done
+            </span>
+          )}
+          {researchStatus === "planning" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-400">
+              <Spinner />
+              Planning...
+            </span>
+          )}
+          {researchStatus === "researching" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-400">
+              <Spinner />
+              Researching...
+            </span>
+          )}
+          {researchStatus === "error" && (
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600">
+                {errorMessage}
+              </span>
+              <button
+                onClick={handleCancel}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+              >
+                Dismiss
+              </button>
+            </span>
+          )}
+          {researchStatus === "done" && result && (
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                {result.epc_contractor || "Unknown"}
+              </span>
+              <Link
+                href={`/projects/${project.id}`}
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                View details
+              </Link>
+            </span>
           )}
         </td>
       </tr>
 
-      {/* Expanded detail row */}
-      {isExpanded && discovery && (
-        <tr className="border-b border-slate-100">
-          <td colSpan={6} className="bg-slate-50 px-8 py-5">
-            <div className="flex flex-col gap-4 max-w-3xl">
-              {/* Reasoning */}
-              {discovery.reasoning && (
-                <div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Reasoning
-                  </p>
-                  <p className="text-sm leading-relaxed text-slate-600">
-                    {discovery.reasoning}
-                  </p>
-                </div>
-              )}
-
-              {/* Sources */}
-              {discovery.sources.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Sources ({discovery.sources.length})
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {discovery.sources.map((source, i) => (
-                      <SourceCard key={i} source={source} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Review actions */}
-              {discovery.review_status === "pending" && (
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={() => onReview(discovery.id, "accepted")}
-                    className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => onReview(discovery.id, "rejected")}
-                    className="rounded-md border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
+      {/* Expanded plan approval card */}
+      {isExpanded && (researchStatus === "plan_ready" || researchStatus === "researching") && (
+        <tr className="border-b border-slate-200">
+          <td colSpan={columnCount} className="bg-slate-50 px-6 py-4">
+            <div className="max-w-2xl">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Research Plan
+              </p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                {plan}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                {researchStatus === "plan_ready" && (
+                  <>
+                    <button
+                      onClick={handleExecute}
+                      className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800"
+                    >
+                      Approve & Run
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-white"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {researchStatus === "researching" && (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-400">
+                    <Spinner />
+                    Running research...
+                  </span>
+                )}
+              </div>
             </div>
           </td>
         </tr>

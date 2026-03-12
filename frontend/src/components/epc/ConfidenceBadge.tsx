@@ -4,6 +4,7 @@ interface ConfidenceBadgeProps {
   confidence: string;
   sourceCount?: number;
   warning?: string;
+  size?: "sm" | "md";
 }
 
 const BADGE_STYLES: Record<string, string> = {
@@ -17,6 +18,7 @@ export default function ConfidenceBadge({
   confidence,
   sourceCount,
   warning,
+  size = "md",
 }: ConfidenceBadgeProps) {
   const style = BADGE_STYLES[confidence] || BADGE_STYLES.unknown;
 
@@ -28,7 +30,7 @@ export default function ConfidenceBadge({
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
-        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${style}`}
+        className={`inline-block rounded-full font-semibold capitalize ${style} ${size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-0.5 text-xs"}`}
       >
         {label}
       </span>
