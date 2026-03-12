@@ -122,16 +122,16 @@ export default function ProjectPicker({
     filteredProjects.every((p) => checkedIds.has(p.id));
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-lg border border-border-subtle bg-surface-raised">
       {/* Select-all header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2">
         <input
           type="checkbox"
           checked={allChecked}
           onChange={() => onToggleAll(filteredIds)}
-          className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          className="h-3.5 w-3.5 rounded border-border-default accent-accent-amber"
         />
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-text-secondary">
           {checkedIds.size > 0
             ? `${checkedIds.size} selected`
             : `${filteredProjects.length} projects`}
@@ -140,7 +140,7 @@ export default function ProjectPicker({
 
       <div className="max-h-[calc(100vh-380px)] overflow-y-auto">
         {filteredProjects.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-slate-400">
+          <div className="px-4 py-12 text-center text-sm text-text-tertiary">
             No projects match the current filters.
           </div>
         ) : (
@@ -152,11 +152,11 @@ export default function ProjectPicker({
             const isExpanded = expandedIds.has(project.id);
 
             return (
-              <div key={project.id} className="border-b border-slate-100">
+              <div key={project.id} className="border-b border-border-subtle">
                 <div
                   onClick={() => onSelect(project)}
-                  className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-slate-50 ${
-                    isSelected ? "bg-blue-50 hover:bg-blue-50" : ""
+                  className={`flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-surface-overlay ${
+                    isSelected ? "bg-accent-amber-muted hover:bg-accent-amber-muted" : ""
                   }`}
                 >
                   {/* Expand chevron */}
@@ -165,7 +165,7 @@ export default function ProjectPicker({
                       e.stopPropagation();
                       toggleExpand(project.id);
                     }}
-                    className="mr-2 shrink-0 text-slate-400 hover:text-slate-600"
+                    className="mr-2 shrink-0 text-text-tertiary hover:text-text-primary"
                   >
                     <svg
                       className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
@@ -184,21 +184,21 @@ export default function ProjectPicker({
                     checked={isChecked}
                     onClick={(e) => e.stopPropagation()}
                     onChange={() => onToggleCheck(project.id)}
-                    className="mr-3 h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="mr-3 h-3.5 w-3.5 shrink-0 rounded border-border-default accent-accent-amber"
                   />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-slate-900">
+                      <span className="truncate text-sm font-medium text-text-primary">
                         {project.project_name || project.queue_id}
                       </span>
                       {project.mw_capacity && (
-                        <span className="shrink-0 text-xs text-slate-400">
+                        <span className="shrink-0 text-xs text-text-tertiary">
                           {project.mw_capacity} MW
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-text-secondary">
                       {project.developer && (
                         <span className="truncate">{project.developer}</span>
                       )}
@@ -212,13 +212,13 @@ export default function ProjectPicker({
                     {/* EPC status */}
                     {discovery ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="max-w-[120px] truncate text-xs font-medium text-slate-700">
+                        <span className="max-w-[120px] truncate text-xs font-medium text-text-primary">
                           {discovery.epc_contractor}
                         </span>
                         <ConfidenceBadge confidence={discovery.confidence} />
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">No EPC</span>
+                      <span className="text-xs text-text-tertiary">No EPC</span>
                     )}
 
                     {/* Research button */}
@@ -228,7 +228,7 @@ export default function ProjectPicker({
                         onResearch(project.id);
                       }}
                       disabled={isResearching}
-                      className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                      className="rounded-md border border-border-default px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay disabled:opacity-40"
                     >
                       {isResearching ? (
                         <span className="flex items-center gap-1">
@@ -262,38 +262,38 @@ export default function ProjectPicker({
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50 px-10 py-3">
+                  <div className="border-t border-border-subtle bg-surface-overlay px-10 py-3">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
                       <div>
-                        <span className="font-medium text-slate-500">Developer:</span>{" "}
-                        <span className="text-slate-700">{project.developer || "—"}</span>
+                        <span className="font-medium text-text-tertiary">Developer:</span>{" "}
+                        <span className="text-text-secondary">{project.developer || "—"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-500">State:</span>{" "}
-                        <span className="text-slate-700">{project.state || "—"}</span>
+                        <span className="font-medium text-text-tertiary">State:</span>{" "}
+                        <span className="text-text-secondary">{project.state || "—"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-500">Source:</span>{" "}
-                        <span className="text-slate-700">
+                        <span className="font-medium text-text-tertiary">Source:</span>{" "}
+                        <span className="text-text-secondary">
                           {project.source === "gem_tracker" ? "GEM Tracker" : project.iso_region}
                         </span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-500">Expected COD:</span>{" "}
-                        <span className="text-slate-700">{project.expected_cod || "—"}</span>
+                        <span className="font-medium text-text-tertiary">Expected COD:</span>{" "}
+                        <span className="text-text-secondary">{project.expected_cod || "—"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-500">EPC (accepted):</span>{" "}
-                        <span className="text-slate-700">{project.epc_company || "—"}</span>
+                        <span className="font-medium text-text-tertiary">EPC (accepted):</span>{" "}
+                        <span className="text-text-secondary">{project.epc_company || "—"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-500">Queue Status:</span>{" "}
-                        <span className="text-slate-700">{project.status || "—"}</span>
+                        <span className="font-medium text-text-tertiary">Queue Status:</span>{" "}
+                        <span className="text-text-secondary">{project.status || "—"}</span>
                       </div>
                     </div>
                     {discovery && discovery.sources.length > 0 && (
                       <div className="mt-3">
-                        <p className="mb-1 text-xs font-medium text-slate-500">
+                        <p className="mb-1 text-xs font-medium text-text-tertiary">
                           Data Sources ({discovery.sources.length})
                         </p>
                         <div className="flex flex-col gap-2">

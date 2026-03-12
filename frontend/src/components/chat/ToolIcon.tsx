@@ -130,7 +130,7 @@ interface ToolIconProps {
 
 export default function ToolIcon({ toolName }: ToolIconProps) {
   return (
-    <span className="inline-flex shrink-0 text-slate-500">
+    <span className="inline-flex shrink-0 text-text-tertiary">
       {icons[toolName] || icons._default}
     </span>
   );

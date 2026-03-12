@@ -20,7 +20,7 @@ export default function CsvCard({ data }: CsvCardProps) {
 
   if (data.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-lg badge-red border border-status-red/20 p-4 text-sm">
         CSV error: {data.error}
       </div>
     );
@@ -43,12 +43,12 @@ export default function CsvCard({ data }: CsvCardProps) {
   }
 
   return (
-    <div className="bg-white p-4">
+    <div className="bg-surface-raised p-4">
       {/* Header bar */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded bg-emerald-100">
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-emerald-600">
+          <div className="flex h-7 w-7 items-center justify-center rounded bg-status-green/20">
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-status-green">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
@@ -56,10 +56,10 @@ export default function CsvCard({ data }: CsvCardProps) {
             </svg>
           </div>
           <div>
-            <span className="text-sm font-medium text-slate-900">
+            <span className="text-sm font-medium text-text-primary">
               {data.filename || "export.csv"}
             </span>
-            <span className="ml-2 text-xs text-slate-500">
+            <span className="ml-2 text-xs text-text-secondary">
               {data.row_count ?? allRows.length} rows · {headers.length} columns
             </span>
           </div>
@@ -67,7 +67,7 @@ export default function CsvCard({ data }: CsvCardProps) {
         {data.csv_text && (
           <button
             onClick={handleDownload}
-            className="flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+            className="flex items-center gap-1.5 rounded-md bg-accent-amber px-3 py-1.5 text-xs font-medium text-surface-primary transition-colors hover:bg-accent-amber/90"
           >
             <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -81,27 +81,27 @@ export default function CsvCard({ data }: CsvCardProps) {
 
       {/* Table */}
       {headers.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <div className="overflow-x-auto rounded-lg border border-border-subtle">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-border-subtle bg-surface-overlay">
                 {headers.map((h, i) => (
                   <th
                     key={i}
-                    className="whitespace-nowrap px-3 py-2 font-semibold text-slate-700"
+                    className="whitespace-nowrap px-3 py-2 font-semibold text-text-primary"
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border-subtle">
               {displayRows.map((row, ri) => (
-                <tr key={ri} className="hover:bg-slate-50">
+                <tr key={ri} className="hover:bg-surface-overlay">
                   {row.map((cell, ci) => (
                     <td
                       key={ci}
-                      className="max-w-[200px] truncate whitespace-nowrap px-3 py-1.5 text-slate-600"
+                      className="max-w-[200px] truncate whitespace-nowrap px-3 py-1.5 text-text-secondary"
                       title={cell}
                     >
                       {cell}
@@ -118,7 +118,7 @@ export default function CsvCard({ data }: CsvCardProps) {
       {hasMore && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-700"
+          className="mt-2 text-xs font-medium text-accent-amber hover:text-accent-amber/80"
         >
           {showAll
             ? "Show less"

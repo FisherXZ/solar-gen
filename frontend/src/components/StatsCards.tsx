@@ -37,9 +37,9 @@ export default function StatsCards({ projects, discoveries, lastRuns }: StatsCar
 
   function freshnessDot(date: Date): string {
     const days = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (days <= 7) return "bg-emerald-400";
-    if (days <= 14) return "bg-amber-400";
-    return "bg-red-400";
+    if (days <= 7) return "bg-status-green";
+    if (days <= 14) return "bg-status-amber";
+    return "bg-status-red";
   }
 
   const isoScrapes = Object.entries(isoLastScrape)
@@ -53,29 +53,29 @@ export default function StatsCards({ projects, discoveries, lastRuns }: StatsCar
         <StatCard
           label="EPCs Found"
           value={confirmedIds.size.toLocaleString()}
-          accent={confirmedIds.size > 0 ? "text-emerald-600" : undefined}
+          accent={confirmedIds.size > 0 ? "text-status-green" : undefined}
         />
         <StatCard
           label="Pending Review"
           value={pendingIds.size.toLocaleString()}
-          accent={pendingIds.size > 0 ? "text-blue-600" : undefined}
+          accent={pendingIds.size > 0 ? "text-accent-amber" : undefined}
         />
         {/* Data Freshness card — per-ISO breakdown */}
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <p className="text-sm font-medium text-slate-500">Data Freshness</p>
+        <div className="rounded-lg border border-border-subtle bg-surface-raised p-5">
+          <p className="text-sm font-medium text-text-secondary">Data Freshness</p>
           <div className="mt-1.5 flex flex-col gap-1">
             {isoScrapes.length > 0 ? (
               isoScrapes.map(({ iso, date, dot }) => (
                 <div key={iso} className="flex items-center gap-2 text-sm">
                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-                  <span className="font-medium text-slate-700">{iso}</span>
-                  <span className="text-slate-400">
+                  <span className="font-medium text-text-primary">{iso}</span>
+                  <span className="text-text-tertiary">
                     {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
                 </div>
               ))
             ) : (
-              <span className="text-sm text-slate-400">No scrape data</span>
+              <span className="text-sm text-text-tertiary">No scrape data</span>
             )}
           </div>
         </div>
@@ -94,9 +94,9 @@ function StatCard({
   accent?: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className={`mt-1 text-lg font-semibold ${accent || "text-slate-900"}`}>
+    <div className="rounded-lg border border-border-subtle bg-surface-raised p-5">
+      <p className="text-sm font-medium text-text-secondary">{label}</p>
+      <p className={`mt-1 text-lg font-semibold ${accent || "text-text-primary"}`}>
         {value}
       </p>
     </div>

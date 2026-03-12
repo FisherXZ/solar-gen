@@ -13,7 +13,7 @@ interface GuidanceCardProps {
 export default function GuidanceCard({ data }: GuidanceCardProps) {
   if (data.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-lg badge-red border border-status-red/20 p-4 text-sm">
         Guidance error: {data.error}
       </div>
     );
@@ -28,13 +28,13 @@ export default function GuidanceCard({ data }: GuidanceCardProps) {
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+    <div className="rounded-lg border border-accent-amber/30 bg-accent-amber-muted p-4">
       {data.status_summary && (
-        <p className="mb-2 text-sm text-slate-600">{data.status_summary}</p>
+        <p className="mb-2 text-sm text-text-secondary">{data.status_summary}</p>
       )}
 
       {data.question && (
-        <p className="mb-3 text-sm font-medium text-slate-900">
+        <p className="mb-3 text-sm font-medium text-text-primary">
           {data.question}
         </p>
       )}
@@ -45,7 +45,7 @@ export default function GuidanceCard({ data }: GuidanceCardProps) {
             <button
               key={i}
               onClick={() => handleOptionClick(option)}
-              className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100"
+              className="rounded-md border border-accent-amber/30 bg-surface-raised px-3 py-1.5 text-xs font-medium text-accent-amber transition-colors hover:bg-surface-overlay"
             >
               {option}
             </button>

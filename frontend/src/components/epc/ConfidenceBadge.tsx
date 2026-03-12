@@ -8,10 +8,10 @@ interface ConfidenceBadgeProps {
 }
 
 const BADGE_STYLES: Record<string, string> = {
-  confirmed: "bg-emerald-100 text-emerald-700",
-  likely: "bg-orange-100 text-orange-700",
-  possible: "bg-amber-100 text-amber-700",
-  unknown: "bg-slate-100 text-slate-600",
+  confirmed: "badge-green",
+  likely: "badge-amber",
+  possible: "badge-amber",
+  unknown: "badge-neutral",
 };
 
 export default function ConfidenceBadge({
@@ -35,7 +35,7 @@ export default function ConfidenceBadge({
         {label}
       </span>
       {warning && (
-        <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
+        <span className="inline-block rounded-full badge-amber px-2 py-0.5 text-xs font-medium">
           Unverified
         </span>
       )}

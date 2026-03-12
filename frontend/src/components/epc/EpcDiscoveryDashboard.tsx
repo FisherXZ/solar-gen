@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Project, EpcDiscovery, ConstructionStatus } from "@/lib/types";
 import ConfidenceBadge from "./ConfidenceBadge";
 import ResearchPlanCard from "./ResearchPlanCard";
+import { apiKeyHeader } from "@/lib/api-key";
 import {
   saveResearchState,
   getResearchState,
@@ -77,12 +78,12 @@ function formatDate(dateStr: string | null): string {
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  let bg = "bg-red-100 text-red-700";
-  if (score >= 70) bg = "bg-emerald-100 text-emerald-700";
-  else if (score >= 40) bg = "bg-amber-100 text-amber-700";
+  let cls = "badge-red";
+  if (score >= 70) cls = "badge-green";
+  else if (score >= 40) cls = "badge-amber";
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${bg}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`}
     >
       {score}
     </span>
@@ -91,11 +92,11 @@ function ScoreBadge({ score }: { score: number }) {
 
 function ConstructionPill({ status }: { status: ConstructionStatus }) {
   const cls: Record<string, string> = {
-    pre_construction: "bg-amber-50 text-amber-700",
-    under_construction: "bg-orange-50 text-orange-700",
-    completed: "bg-emerald-50 text-emerald-700",
-    cancelled: "bg-red-50 text-red-600",
-    unknown: "bg-slate-100 text-slate-500",
+    pre_construction: "badge-amber",
+    under_construction: "badge-amber",
+    completed: "badge-green",
+    cancelled: "badge-red",
+    unknown: "badge-neutral",
   };
   return (
     <span
@@ -122,6 +123,8 @@ function parseErrorMessage(status: number, body: string): string {
   if (status === 429) return "Rate limited. Wait a moment.";
   return `Request failed (${status})`;
 }
+
+const selectClasses = "h-8 rounded-md border border-border-default bg-surface-raised px-2 text-sm text-text-primary focus:border-border-focus focus:ring-1 focus:ring-border-focus focus:outline-none";
 
 export default function EpcDiscoveryDashboard({
   projects,
@@ -298,7 +301,7 @@ export default function EpcDiscoveryDashboard({
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
         <select
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          className={selectClasses}
           value={filterState}
           onChange={(e) => updateFilter(setFilterState)(e.target.value)}
         >
@@ -311,7 +314,7 @@ export default function EpcDiscoveryDashboard({
         </select>
 
         <select
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          className={selectClasses}
           value={filterResearch}
           onChange={(e) => updateFilter(setFilterResearch)(e.target.value)}
         >
@@ -322,7 +325,7 @@ export default function EpcDiscoveryDashboard({
         </select>
 
         <select
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          className={selectClasses}
           value={filterConstruction}
           onChange={(e) => updateFilter(setFilterConstruction)(e.target.value)}
         >
@@ -335,7 +338,7 @@ export default function EpcDiscoveryDashboard({
         </select>
 
         <select
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          className={selectClasses}
           value={codYearFrom || ""}
           onChange={(e) =>
             updateFilter(setCodYearFrom)(Number(e.target.value) || 0)
@@ -350,7 +353,7 @@ export default function EpcDiscoveryDashboard({
         </select>
 
         <select
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+          className={selectClasses}
           value={codYearTo || ""}
           onChange={(e) =>
             updateFilter(setCodYearTo)(Number(e.target.value) || 0)
@@ -367,22 +370,22 @@ export default function EpcDiscoveryDashboard({
         <input
           type="text"
           placeholder="Search..."
-          className="h-8 w-56 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className="h-8 w-56 rounded-md border border-border-default bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:ring-1 focus:ring-border-focus focus:outline-none"
           value={searchQuery}
           onChange={(e) => updateFilter(setSearchQuery)(e.target.value)}
         />
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface-raised">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-border-subtle bg-surface-overlay">
                 {COLUMNS.map((col) => (
                   <th
                     key={col.key}
-                    className="cursor-pointer select-none whitespace-nowrap px-4 py-3 text-left font-medium text-slate-600 hover:text-slate-900"
+                    className="cursor-pointer select-none whitespace-nowrap px-4 py-3 text-left font-medium text-text-secondary hover:text-text-primary"
                     onClick={() => handleSort(col.key)}
                   >
                     {col.label}
@@ -400,7 +403,7 @@ export default function EpcDiscoveryDashboard({
                 <tr>
                   <td
                     colSpan={COLUMNS.length}
-                    className="px-4 py-12 text-center text-slate-400"
+                    className="px-4 py-12 text-center text-text-tertiary"
                   >
                     No projects match the current filters.
                   </td>
@@ -434,22 +437,22 @@ export default function EpcDiscoveryDashboard({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
-          <p className="text-sm text-slate-500">
+        <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3">
+          <p className="text-sm text-text-secondary">
             {sorted.length > 0
               ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sorted.length)} of ${sorted.length.toLocaleString()}`
               : "0 results"}
           </p>
           <div className="flex gap-2">
             <button
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+              className="rounded-md border border-border-default px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-overlay disabled:opacity-40"
               onClick={() => setPage(page - 1)}
               disabled={page === 0}
             >
               Previous
             </button>
             <button
-              className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+              className="rounded-md border border-border-default px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-overlay disabled:opacity-40"
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages - 1}
             >
@@ -535,16 +538,16 @@ function ProjectRow({
     <span
       className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
         discovery.review_status === "accepted"
-          ? "bg-emerald-100 text-emerald-700"
+          ? "badge-green"
           : discovery.review_status === "pending"
-            ? "bg-amber-100 text-amber-700"
-            : "bg-red-100 text-red-700"
+            ? "badge-amber"
+            : "badge-red"
       }`}
     >
       {discovery.review_status}
     </span>
   ) : (
-    <span className="text-xs text-slate-300">—</span>
+    <span className="text-xs text-text-tertiary">—</span>
   );
 
   async function handleStartPlan() {
@@ -554,7 +557,7 @@ function ProjectRow({
     try {
       const res = await fetch(`${AGENT_API_URL}/api/discover/plan`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
         body: JSON.stringify({ project_id: project.id }),
       });
       if (!res.ok) {
@@ -581,7 +584,7 @@ function ProjectRow({
     try {
       const res = await fetch(`${AGENT_API_URL}/api/discover`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
         body: JSON.stringify({ project_id: project.id, plan }),
       });
       if (!res.ok) {
@@ -622,7 +625,7 @@ function ProjectRow({
       {/* Main data row — clicks navigate to detail page */}
       <tr
         onClick={() => router.push(`/projects/${project.id}`)}
-        className="cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50"
+        className="cursor-pointer border-b border-border-subtle transition-colors hover:bg-surface-overlay"
       >
         {/* Score */}
         <td className="px-4 py-3">
@@ -631,10 +634,10 @@ function ProjectRow({
 
         {/* Project */}
         <td className="max-w-[220px] px-4 py-3">
-          <div className="truncate font-medium text-slate-900">
+          <div className="truncate font-medium text-text-primary">
             {project.project_name || project.queue_id}
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-text-tertiary">
             {project.developer && (
               <span className="truncate">{project.developer}</span>
             )}
@@ -650,11 +653,11 @@ function ProjectRow({
         {/* EPC Contractor */}
         <td className="px-4 py-3">
           {discovery ? (
-            <span className="font-medium text-slate-900">
+            <span className="font-medium text-text-primary">
               {discovery.epc_contractor}
             </span>
           ) : (
-            <span className="text-slate-300">—</span>
+            <span className="text-text-tertiary">—</span>
           )}
         </td>
 
@@ -663,7 +666,7 @@ function ProjectRow({
           {discovery ? (
             <ConfidenceBadge confidence={discovery.confidence} />
           ) : (
-            <span className="text-slate-300">—</span>
+            <span className="text-text-tertiary">—</span>
           )}
         </td>
 
@@ -676,18 +679,18 @@ function ProjectRow({
         </td>
 
         {/* Queue Date */}
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+        <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
           {formatDate(project.queue_date)}
         </td>
 
         {/* Expected COD */}
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+        <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
           {formatDate(project.expected_cod)}
         </td>
       </tr>
 
       {/* Research action row — sits below the data row */}
-      <tr className="border-b border-slate-200">
+      <tr className="border-b border-border-subtle">
         <td colSpan={columnCount} className="px-4 py-1.5">
           {researchStatus === "idle" && !isExpanded && !discovery && (
             <button
@@ -695,7 +698,7 @@ function ProjectRow({
                 e.stopPropagation();
                 handleStartPlan();
               }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-accent-amber/30 bg-accent-amber-muted px-3 py-1 text-xs font-medium text-accent-amber transition-colors hover:border-accent-amber/50 hover:bg-accent-amber/20"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -704,7 +707,7 @@ function ProjectRow({
             </button>
           )}
           {researchStatus === "idle" && !isExpanded && discovery && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
+            <span className="inline-flex items-center gap-1 badge-green rounded-full px-3 py-1 text-xs font-medium">
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
@@ -712,25 +715,25 @@ function ProjectRow({
             </span>
           )}
           {researchStatus === "planning" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-tertiary">
               <Spinner />
               Planning...
             </span>
           )}
           {researchStatus === "researching" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-tertiary">
               <Spinner />
               Researching...
             </span>
           )}
           {researchStatus === "error" && (
             <span className="inline-flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600">
+              <span className="inline-flex items-center rounded-full badge-red px-3 py-1 text-xs font-medium">
                 {errorMessage}
               </span>
               <button
                 onClick={handleCancel}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+                className="rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay/80"
               >
                 Dismiss
               </button>
@@ -738,7 +741,7 @@ function ProjectRow({
           )}
           {researchStatus === "done" && result && (
             <span className="inline-flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1 badge-green rounded-full px-3 py-1 text-xs font-medium">
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
@@ -746,7 +749,7 @@ function ProjectRow({
               </span>
               <Link
                 href={`/projects/${project.id}`}
-                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="inline-flex items-center rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
               >
                 View details
               </Link>
@@ -757,7 +760,7 @@ function ProjectRow({
 
       {/* Expanded plan approval card */}
       {isExpanded && (researchStatus === "plan_ready" || researchStatus === "researching") && (
-        <tr className="border-b border-slate-200">
+        <tr className="border-b border-border-subtle">
           <td colSpan={columnCount} className="px-6 py-4">
             <ResearchPlanCard
               plan={plan}

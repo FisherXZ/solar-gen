@@ -45,9 +45,9 @@ function getSourcePillHref(source: EpcSource): string | null {
 }
 
 const RELIABILITY_DOT: Record<string, string> = {
-  high: "bg-emerald-400",
-  medium: "bg-amber-400",
-  low: "bg-red-400",
+  high: "bg-status-green",
+  medium: "bg-status-amber",
+  low: "bg-status-red",
 };
 
 export default function DiscoveryApprovalCard({
@@ -57,7 +57,7 @@ export default function DiscoveryApprovalCard({
 
   if (data.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-lg badge-red border border-status-red/20 p-4 text-sm">
         Review error: {data.error}
       </div>
     );
@@ -78,17 +78,17 @@ export default function DiscoveryApprovalCard({
 
   // Left border + background based on state
   const borderClass = isAccepted
-    ? "border-l-4 border-l-emerald-400 bg-emerald-50/30"
+    ? "border-l-4 border-l-status-green bg-status-green/5"
     : isRejected
-      ? "border-l-4 border-l-red-300 bg-red-50/30 opacity-75"
-      : "border-l-4 border-l-amber-400";
+      ? "border-l-4 border-l-status-red bg-status-red/5 opacity-75"
+      : "border-l-4 border-l-status-amber";
 
   return (
-    <div className={`rounded-lg border border-slate-200 p-4 ${borderClass}`}>
+    <div className={`rounded-lg border border-border-subtle p-4 ${borderClass}`}>
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-slate-900">
+          <h4 className="text-sm font-semibold text-text-primary">
             {isUnknown
               ? "EPC Not Found — Review Required"
               : data.epc_contractor}
@@ -114,11 +114,11 @@ export default function DiscoveryApprovalCard({
 
             const pillContent = (
               <>
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-overlay text-[10px] font-bold text-text-secondary">
                   {i + 1}
                 </span>
                 {isSearch ? (
-                  <svg className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <svg className="h-4 w-4 shrink-0 text-text-tertiary" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                   </svg>
                 ) : (
@@ -134,7 +134,7 @@ export default function DiscoveryApprovalCard({
                     }}
                   />
                 )}
-                <span className="truncate text-xs text-slate-600">
+                <span className="truncate text-xs text-text-secondary">
                   {isSearch ? "Web search" : domain}
                 </span>
                 <span
@@ -150,14 +150,14 @@ export default function DiscoveryApprovalCard({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                className="flex items-center gap-1.5 rounded-full border border-border-default bg-surface-raised px-2.5 py-1 transition-colors hover:border-border-focus hover:bg-surface-overlay"
               >
                 {pillContent}
               </a>
             ) : (
               <span
                 key={i}
-                className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1"
+                className="flex items-center gap-1.5 rounded-full border border-border-default bg-surface-raised px-2.5 py-1"
               >
                 {pillContent}
               </span>
@@ -169,12 +169,12 @@ export default function DiscoveryApprovalCard({
       {/* Legacy fallback: source_summary as plain text */}
       {sources.length === 0 && data.source_summary && data.source_summary.length > 0 && (
         <div className="mb-3">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-tertiary">
             Sources ({data.source_summary.length})
           </p>
           <ul className="space-y-0.5">
             {data.source_summary.map((s, i) => (
-              <li key={i} className="text-sm text-slate-600">
+              <li key={i} className="text-sm text-text-secondary">
                 &bull; {s}
               </li>
             ))}
@@ -184,11 +184,11 @@ export default function DiscoveryApprovalCard({
 
       {/* Assessment */}
       {data.assessment && (
-        <div className="mb-3 rounded-md bg-white/60 px-3 py-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="mb-3 rounded-md bg-surface-overlay/60 px-3 py-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
             Assessment
           </p>
-          <p className="mt-0.5 text-sm text-slate-700">{data.assessment}</p>
+          <p className="mt-0.5 text-sm text-text-secondary">{data.assessment}</p>
         </div>
       )}
 
@@ -197,7 +197,7 @@ export default function DiscoveryApprovalCard({
         <div className="mb-3">
           <button
             onClick={() => setSourcesOpen(!sourcesOpen)}
-            className="flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700"
+            className="flex items-center gap-1 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
           >
             <svg
               className={`h-3.5 w-3.5 transition-transform ${sourcesOpen ? "rotate-90" : ""}`}
@@ -224,12 +224,12 @@ export default function DiscoveryApprovalCard({
       {hasDecision && (
         <div className="mb-2">
           {isAccepted && (
-            <span className="inline-block rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="inline-block badge-green rounded-full px-2.5 py-0.5 text-xs font-semibold">
               Confirmed
             </span>
           )}
           {isRejected && (
-            <span className="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600">
+            <span className="inline-block badge-red rounded-full px-2.5 py-0.5 text-xs font-semibold">
               Rejected
             </span>
           )}
@@ -241,19 +241,19 @@ export default function DiscoveryApprovalCard({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleOption("Accept this finding")}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+            className="rounded-md bg-status-green px-3 py-1.5 text-xs font-medium text-surface-primary transition-colors hover:bg-status-green/90"
           >
             Accept
           </button>
           <button
             onClick={() => handleOption("Reject — ")}
-            className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+            className="rounded-md border border-status-red/30 px-3 py-1.5 text-xs font-medium text-status-red transition-colors hover:bg-status-red/10"
           >
             Reject
           </button>
           <button
             onClick={() => handleOption("Keep researching")}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            className="rounded-md border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay"
           >
             Keep Researching
           </button>

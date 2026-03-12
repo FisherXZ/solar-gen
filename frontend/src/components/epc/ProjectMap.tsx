@@ -24,18 +24,17 @@ function buildDiscoveryMap(discoveries: EpcDiscovery[]) {
 
 function getMarkerColor(project: Project, discovery: EpcDiscovery | undefined): string {
   if (discovery && discovery.epc_contractor !== "Unknown") {
-    // EPC found — color by confidence
     switch (discovery.confidence) {
-      case "confirmed": return "#10b981"; // emerald-500
-      case "likely":    return "#34d399"; // emerald-400
-      case "possible":  return "#fbbf24"; // amber-400
+      case "confirmed": return "#5CB77A"; // status-green
+      case "likely":    return "#5CB77A";
+      case "possible":  return "#E8A230"; // accent-amber
       default:          return "#94a3b8"; // slate-400
     }
   }
   if (project.epc_company) {
-    return "#10b981"; // emerald-500
+    return "#5CB77A"; // status-green
   }
-  return "#64748b"; // slate-500 — no EPC yet
+  return "#94a3b8"; // slate-400 — no EPC yet
 }
 
 function getMarkerRadius(mw: number | null): number {
@@ -68,21 +67,21 @@ export default function ProjectMap({ projects, discoveries }: ProjectMapProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Legend + stats */}
-      <div className="flex flex-wrap items-center gap-6 text-sm text-slate-600">
+      <div className="flex flex-wrap items-center gap-6 text-sm text-text-secondary">
         <span>{stats.total} projects mapped</span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-emerald-500" />
+          <span className="inline-block h-3 w-3 rounded-full bg-status-green" />
           EPC found ({stats.withEpc})
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-full bg-slate-500" />
+          <span className="inline-block h-3 w-3 rounded-full bg-text-tertiary" />
           Needs research ({stats.withoutEpc})
         </span>
-        <span className="text-slate-400">Circle size = MW capacity</span>
+        <span className="text-text-tertiary">Circle size = MW capacity</span>
       </div>
 
       {/* Map */}
-      <div className="h-[calc(100vh-220px)] min-h-[500px] overflow-hidden rounded-lg border border-slate-200">
+      <div className="h-[calc(100vh-220px)] min-h-[500px] overflow-hidden rounded-lg border border-border-subtle">
         <MapContainer
           center={center}
           zoom={5}
@@ -113,31 +112,32 @@ export default function ProjectMap({ projects, discoveries }: ProjectMapProps) {
               >
                 <Popup>
                   <div className="min-w-[200px] text-sm">
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold">
                       {project.project_name || project.queue_id}
                     </p>
                     {project.developer && (
-                      <p className="text-slate-600">Developer: {project.developer}</p>
+                      <p>Developer: {project.developer}</p>
                     )}
                     {epc && epc !== "Unknown" && (
-                      <p className="text-emerald-700 font-medium">EPC: {epc}</p>
+                      <p className="font-medium" style={{ color: "#5CB77A" }}>EPC: {epc}</p>
                     )}
                     {discovery && (
-                      <p className="text-slate-500">
+                      <p>
                         Confidence: {discovery.confidence}
                       </p>
                     )}
-                    <p className="text-slate-500">
+                    <p>
                       {project.mw_capacity ? `${project.mw_capacity} MW` : ""}
                       {project.state ? ` · ${project.state}` : ""}
                       {project.county ? `, ${project.county}` : ""}
                     </p>
-                    <p className="text-slate-400">
+                    <p>
                       {project.iso_region} · Score: {project.lead_score}
                     </p>
                     <Link
                       href={`/projects/${project.id}`}
-                      className="mt-1 inline-block text-blue-600 hover:underline"
+                      className="mt-1 inline-block"
+                      style={{ color: "#E8A230" }}
                     >
                       View details
                     </Link>

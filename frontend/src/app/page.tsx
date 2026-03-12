@@ -21,7 +21,7 @@ export default async function PipelinePage() {
   if (projectsResult.error) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-red-600">
+        <p className="text-status-red">
           Failed to load projects: {projectsResult.error.message}
         </p>
       </main>
@@ -31,8 +31,8 @@ export default async function PipelinePage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Pipeline</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold font-serif text-text-primary">Pipeline</h1>
+        <p className="mt-1 text-sm text-text-secondary">
           Utility-scale solar projects from ISO interconnection queues
         </p>
       </div>

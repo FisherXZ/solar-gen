@@ -22,8 +22,8 @@ export default async function ReviewPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Review Queue</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold font-serif text-text-primary">Review Queue</h1>
+        <p className="mt-1 text-sm text-text-secondary">
           Review pending EPC discoveries before they are promoted to the knowledge base.
         </p>
       </div>

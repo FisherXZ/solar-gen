@@ -8,17 +8,20 @@ interface FilterBarProps {
   states: string[];
 }
 
+const selectClasses = "h-9 rounded-md border border-border-default bg-surface-raised px-3 text-sm text-text-primary focus:border-border-focus focus:ring-1 focus:ring-border-focus focus:outline-none";
+const inputClasses = "h-9 rounded-md border border-border-default bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:ring-1 focus:ring-border-focus focus:outline-none";
+
 export default function FilterBar({ filters, onChange, states }: FilterBarProps) {
   const update = (partial: Partial<Filters>) =>
     onChange({ ...filters, ...partial });
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface-raised p-4">
       {/* Source */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Source</label>
+        <label className="text-xs font-medium text-text-tertiary">Source</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.iso_region}
           onChange={(e) => update({ iso_region: e.target.value })}
         >
@@ -32,9 +35,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* State */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">State</label>
+        <label className="text-xs font-medium text-text-tertiary">State</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.state}
           onChange={(e) => update({ state: e.target.value })}
         >
@@ -49,9 +52,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* Status */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Status</label>
+        <label className="text-xs font-medium text-text-tertiary">Status</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.status}
           onChange={(e) => update({ status: e.target.value })}
         >
@@ -64,9 +67,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* Fuel Type */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Fuel Type</label>
+        <label className="text-xs font-medium text-text-tertiary">Fuel Type</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.fuel_type}
           onChange={(e) => update({ fuel_type: e.target.value })}
         >
@@ -78,9 +81,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* Construction Status */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Construction</label>
+        <label className="text-xs font-medium text-text-tertiary">Construction</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.construction_status}
           onChange={(e) => update({ construction_status: e.target.value })}
         >
@@ -95,9 +98,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* COD Year Range */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">COD From</label>
+        <label className="text-xs font-medium text-text-tertiary">COD From</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.cod_year_min || ""}
           onChange={(e) => update({ cod_year_min: Number(e.target.value) || 0 })}
         >
@@ -108,9 +111,9 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">COD To</label>
+        <label className="text-xs font-medium text-text-tertiary">COD To</label>
         <select
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={selectClasses}
           value={filters.cod_year_max || ""}
           onChange={(e) => update({ cod_year_max: Number(e.target.value) || 0 })}
         >
@@ -123,20 +126,20 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* MW Range */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">MW Min</label>
+        <label className="text-xs font-medium text-text-tertiary">MW Min</label>
         <input
           type="number"
-          className="h-9 w-24 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={`${inputClasses} w-24`}
           placeholder="20"
           value={filters.mw_min || ""}
           onChange={(e) => update({ mw_min: Number(e.target.value) || 0 })}
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">MW Max</label>
+        <label className="text-xs font-medium text-text-tertiary">MW Max</label>
         <input
           type="number"
-          className="h-9 w-24 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={`${inputClasses} w-24`}
           placeholder="Any"
           value={filters.mw_max || ""}
           onChange={(e) => update({ mw_max: Number(e.target.value) || 0 })}
@@ -145,10 +148,10 @@ export default function FilterBar({ filters, onChange, states }: FilterBarProps)
 
       {/* Search */}
       <div className="flex min-w-[200px] flex-1 flex-col gap-1">
-        <label className="text-xs font-medium text-slate-500">Search</label>
+        <label className="text-xs font-medium text-text-tertiary">Search</label>
         <input
           type="text"
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+          className={inputClasses}
           placeholder="Name, developer, EPC, county, state..."
           value={filters.search}
           onChange={(e) => update({ search: e.target.value })}

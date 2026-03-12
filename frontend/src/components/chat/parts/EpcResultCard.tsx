@@ -33,7 +33,7 @@ export default function EpcResultCard({ data }: EpcResultCardProps) {
 
   if (data.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-lg badge-red border border-status-red/20 p-4 text-sm">
         Research error: {data.error}
       </div>
     );
@@ -41,7 +41,7 @@ export default function EpcResultCard({ data }: EpcResultCardProps) {
 
   if (data.skipped) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+      <div className="rounded-lg badge-amber border border-status-amber/20 p-4 text-sm">
         Skipped — already has an accepted EPC discovery.
       </div>
     );
@@ -74,21 +74,21 @@ export default function EpcResultCard({ data }: EpcResultCardProps) {
   }
 
   return (
-    <div className="bg-white p-4">
+    <div className="bg-surface-raised p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-text-primary">
             {discovery.epc_contractor}
           </span>
           <ConfidenceBadge confidence={discovery.confidence} />
         </div>
         {status === "accepted" && (
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+          <span className="badge-green rounded-full px-2 py-0.5 text-xs font-medium">
             Accepted
           </span>
         )}
         {status === "rejected" && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+          <span className="badge-red rounded-full px-2 py-0.5 text-xs font-medium">
             Rejected
           </span>
         )}
@@ -104,14 +104,14 @@ export default function EpcResultCard({ data }: EpcResultCardProps) {
           <button
             onClick={() => handleReview("accepted")}
             disabled={isReviewing}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-md bg-status-green px-3 py-1.5 text-xs font-medium text-surface-primary transition-colors hover:bg-status-green/90 disabled:opacity-50"
           >
             Accept
           </button>
           <button
             onClick={() => handleReview("rejected")}
             disabled={isReviewing}
-            className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+            className="rounded-md bg-status-red/15 px-3 py-1.5 text-xs font-medium text-status-red transition-colors hover:bg-status-red/25 disabled:opacity-50"
           >
             Reject
           </button>

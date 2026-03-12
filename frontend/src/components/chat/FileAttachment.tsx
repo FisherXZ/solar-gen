@@ -20,20 +20,20 @@ function formatSize(bytes: number): string {
 function getFileIcon(type: string) {
   if (type === "application/pdf") {
     return (
-      <div className="flex h-full w-full items-center justify-center rounded bg-red-100 text-[9px] font-bold text-red-600">
+      <div className="flex h-full w-full items-center justify-center rounded bg-status-red/20 text-[9px] font-bold text-status-red">
         PDF
       </div>
     );
   }
   if (type.startsWith("text/") || type === "text/csv") {
     return (
-      <div className="flex h-full w-full items-center justify-center rounded bg-blue-100 text-[9px] font-bold text-blue-600">
+      <div className="flex h-full w-full items-center justify-center rounded bg-accent-amber-muted text-[9px] font-bold text-accent-amber">
         TXT
       </div>
     );
   }
   return (
-    <div className="flex h-full w-full items-center justify-center rounded bg-slate-100 text-[9px] font-bold text-slate-500">
+    <div className="flex h-full w-full items-center justify-center rounded bg-surface-overlay text-[9px] font-bold text-text-tertiary">
       FILE
     </div>
   );
@@ -53,12 +53,12 @@ export default function FileAttachment({
         <img
           src={file.preview}
           alt={file.name}
-          className="max-h-48 max-w-xs rounded-lg border border-white/20"
+          className="max-h-48 max-w-xs rounded-lg border border-border-subtle"
         />
       );
     }
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
+      <div className="inline-flex items-center gap-1.5 rounded-md bg-surface-overlay px-2 py-1">
         <div className="h-5 w-5 shrink-0">{getFileIcon(file.type)}</div>
         <span className="text-xs opacity-80">{file.name}</span>
       </div>
@@ -67,7 +67,7 @@ export default function FileAttachment({
 
   // Input area attachment chip
   return (
-    <div className="group relative flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
+    <div className="group relative flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised px-2.5 py-1.5">
       {/* Thumbnail or icon */}
       <div className="h-8 w-8 shrink-0 overflow-hidden rounded">
         {isImage && file.preview ? (
@@ -83,17 +83,17 @@ export default function FileAttachment({
 
       {/* Info */}
       <div className="min-w-0">
-        <p className="max-w-[160px] truncate text-xs font-medium text-slate-700">
+        <p className="max-w-[160px] truncate text-xs font-medium text-text-primary">
           {file.name}
         </p>
-        <p className="text-[10px] text-slate-400">{formatSize(file.size)}</p>
+        <p className="text-[10px] text-text-tertiary">{formatSize(file.size)}</p>
       </div>
 
       {/* Remove button */}
       {onRemove && (
         <button
           onClick={onRemove}
-          className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400 transition-colors hover:bg-red-100 hover:text-red-500"
+          className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-overlay text-text-tertiary transition-colors hover:bg-status-red/20 hover:text-status-red"
           title="Remove"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

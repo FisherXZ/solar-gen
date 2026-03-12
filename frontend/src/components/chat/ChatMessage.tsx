@@ -65,7 +65,7 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl bg-slate-800 px-5 py-3 text-white shadow-sm">
+        <div className="max-w-[80%] rounded-2xl bg-surface-overlay px-5 py-3 text-text-primary">
           {/* File attachments */}
           {fileParts.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
@@ -108,12 +108,12 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
             return (
               <div
                 key={`text-${gi}`}
-                className="border-l-2 border-slate-200 pl-3 py-1"
+                className="border-l-2 border-border-subtle pl-3 py-1"
               >
                 {group.parts.map((tp) => (
                   <p
                     key={tp.index}
-                    className="text-[13px] leading-relaxed text-slate-400"
+                    className="text-[13px] leading-relaxed text-text-tertiary"
                   >
                     {tp.text}
                   </p>
@@ -124,7 +124,7 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
           // ─── Response text ─── prominent, full typography, no bubble
           return (
-            <div key={`text-${gi}`} className="text-slate-800 pt-1">
+            <div key={`text-${gi}`} className="text-text-primary pt-1">
               {group.parts.map((tp) => (
                 <MarkdownMessage
                   key={tp.index}

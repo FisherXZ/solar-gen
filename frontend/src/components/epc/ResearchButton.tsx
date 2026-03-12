@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfidenceBadge from "./ConfidenceBadge";
 import ResearchPlanCard from "./ResearchPlanCard";
+import { apiKeyHeader } from "@/lib/api-key";
 import {
   saveResearchState,
   getResearchState,
@@ -116,7 +117,7 @@ export default function ResearchButton({
     try {
       const res = await fetch(`${AGENT_API_URL}/api/discover/plan`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
         body: JSON.stringify({ project_id: projectId }),
       });
       if (!res.ok) {
@@ -145,7 +146,7 @@ export default function ResearchButton({
     try {
       const res = await fetch(`${AGENT_API_URL}/api/discover`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
         body: JSON.stringify({ project_id: projectId, plan }),
       });
       if (!res.ok) {
@@ -197,7 +198,7 @@ export default function ResearchButton({
     return (
       <button
         onClick={handlePlan}
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+        className="rounded-md bg-accent-amber px-4 py-2 text-sm font-medium text-surface-primary transition-colors hover:bg-accent-amber/90"
       >
         {hasExisting ? "Re-research" : "Research EPC"}
       </button>
@@ -208,7 +209,7 @@ export default function ResearchButton({
     return (
       <button
         disabled
-        className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400"
+        className="inline-flex items-center gap-2 rounded-md bg-surface-overlay px-4 py-2 text-sm font-medium text-text-tertiary"
       >
         <Spinner />
         Planning research...
@@ -231,7 +232,7 @@ export default function ResearchButton({
     return (
       <button
         disabled
-        className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400"
+        className="inline-flex items-center gap-2 rounded-md bg-surface-overlay px-4 py-2 text-sm font-medium text-text-tertiary"
       >
         <Spinner />
         Researching...
@@ -246,7 +247,7 @@ export default function ResearchButton({
       <div className="max-w-md space-y-2">
         <div className="flex items-center gap-2">
           <svg
-            className="h-4 w-4 text-emerald-500"
+            className="h-4 w-4 text-status-green"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={2}
@@ -258,7 +259,7 @@ export default function ResearchButton({
               d="M4.5 12.75l6 6 9-13.5"
             />
           </svg>
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-text-primary">
             {isUnknown
               ? "No EPC found"
               : result.epc_contractor}
@@ -268,7 +269,7 @@ export default function ResearchButton({
           )}
         </div>
         {result.error_category && (
-          <p className="text-xs text-amber-600">
+          <p className="text-xs text-accent-amber">
             {ERROR_MESSAGES[result.error_category] || result.error_message}
           </p>
         )}
@@ -276,14 +277,14 @@ export default function ResearchButton({
           {result.id && (
             <button
               onClick={handleReviewInChat}
-              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
+              className="rounded-md border border-accent-amber/30 bg-accent-amber-muted px-3 py-1.5 text-xs font-medium text-accent-amber transition-colors hover:bg-accent-amber/20"
             >
               Review in Chat
             </button>
           )}
           <button
             onClick={handleReset}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50"
+            className="rounded-md border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay"
           >
             Done
           </button>
@@ -296,12 +297,12 @@ export default function ResearchButton({
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-red-500">
+          <span className="text-sm text-status-red">
             {errorMessage || "Research failed"}
           </span>
           <button
             onClick={handleReset}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            className="rounded-md border border-border-default px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-overlay"
           >
             Retry
           </button>

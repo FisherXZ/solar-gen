@@ -27,9 +27,9 @@ const CHANNEL_LABELS: Record<string, string> = {
 };
 
 const RELIABILITY_COLORS: Record<string, string> = {
-  high: "bg-emerald-400",
-  medium: "bg-amber-400",
-  low: "bg-red-400",
+  high: "bg-status-green",
+  medium: "bg-status-amber",
+  low: "bg-status-red",
 };
 
 function formatChannelLabel(channel: string): string {
@@ -83,15 +83,15 @@ export default function SourceCard({ source }: SourceCardProps) {
   const link = getSourceLink(source);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-border-subtle bg-surface-overlay p-4">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div>
-            <span className="text-sm font-medium text-slate-900">
+            <span className="text-sm font-medium text-text-primary">
               {formatChannelLabel(source.channel)}
             </span>
             {source.source_method && (
-              <span className="ml-1 text-xs text-slate-400">
+              <span className="ml-1 text-xs text-text-tertiary">
                 via {SOURCE_METHOD_LABELS[source.source_method] || source.source_method}
               </span>
             )}
@@ -102,17 +102,17 @@ export default function SourceCard({ source }: SourceCardProps) {
           />
         </div>
         {source.date && (
-          <span className="text-xs text-slate-400">{source.date}</span>
+          <span className="text-xs text-text-tertiary">{source.date}</span>
         )}
       </div>
 
       {source.publication && (
-        <p className="mb-1 text-xs font-medium text-slate-500">
+        <p className="mb-1 text-xs font-medium text-text-secondary">
           {source.publication}
         </p>
       )}
 
-      <p className="text-sm leading-relaxed text-slate-600">
+      <p className="text-sm leading-relaxed text-text-secondary">
         {source.excerpt}
       </p>
 
@@ -121,7 +121,7 @@ export default function SourceCard({ source }: SourceCardProps) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-block text-xs font-medium text-amber-600 hover:text-amber-800"
+          className="mt-2 inline-block text-xs font-medium text-accent-amber hover:text-accent-amber/80"
         >
           {link.label}
         </a>

@@ -79,8 +79,8 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
 
   if (discoveries.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
-        <p className="text-sm text-slate-500">
+      <div className="rounded-lg border border-border-subtle bg-surface-raised p-12 text-center">
+        <p className="text-sm text-text-secondary">
           No pending discoveries to review. New discoveries will appear here
           after the agent researches projects.
         </p>
@@ -90,48 +90,48 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-text-secondary">
         {discoveries.length} pending{" "}
         {discoveries.length === 1 ? "discovery" : "discoveries"}
       </p>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg badge-red border border-status-red/20 px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+      <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface-raised">
+        <table className="min-w-full divide-y divide-border-subtle">
+          <thead className="bg-surface-overlay">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 Project
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 Developer
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 MW
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 State
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 EPC Contractor
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 Confidence
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 Created
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-text-tertiary">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border-subtle">
             {discoveries.map((d) => {
               const project = d.project || {};
               const isRejecting = rejectingId === d.id;
@@ -146,22 +146,22 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                   <tr
                     onClick={() => toggleExpand(d.id)}
                     className={`cursor-pointer transition-colors ${
-                      isExpanded ? "bg-slate-50" : "hover:bg-slate-50"
+                      isExpanded ? "bg-surface-overlay" : "hover:bg-surface-overlay"
                     }`}
                   >
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                    <td className="px-4 py-3 text-sm font-medium text-text-primary">
                       {project.project_name || "Unnamed"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
+                    <td className="px-4 py-3 text-sm text-text-secondary">
                       {project.developer || "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-right text-sm text-slate-600">
+                    <td className="px-4 py-3 text-right text-sm text-text-secondary">
                       {project.mw_capacity ?? "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
+                    <td className="px-4 py-3 text-sm text-text-secondary">
                       {project.state || "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                    <td className="px-4 py-3 text-sm font-medium text-text-primary">
                       {d.epc_contractor}
                     </td>
                     <td className="px-4 py-3">
@@ -171,7 +171,7 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                         warning={allLow ? "Unverified" : undefined}
                       />
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">
+                    <td className="px-4 py-3 text-sm text-text-tertiary">
                       {d.created_at
                         ? new Date(d.created_at).toLocaleDateString()
                         : "\u2014"}
@@ -186,7 +186,7 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Reason for rejection (required)"
-                            className="w-64 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            className="w-64 rounded-md border border-border-default bg-surface-overlay px-2 py-1.5 text-xs text-text-primary placeholder:text-text-tertiary focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus"
                             rows={2}
                           />
                           <div className="flex gap-1.5">
@@ -195,14 +195,14 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                                 setRejectingId(null);
                                 setRejectReason("");
                               }}
-                              className="rounded-md px-2.5 py-1 text-xs text-slate-500 hover:text-slate-700"
+                              className="rounded-md px-2.5 py-1 text-xs text-text-secondary hover:text-text-primary"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => handleReject(d.id)}
                               disabled={isLoading || !rejectReason.trim()}
-                              className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                              className="rounded-md bg-status-red px-2.5 py-1 text-xs font-medium text-surface-primary hover:bg-status-red/90 disabled:opacity-50"
                             >
                               Confirm Reject
                             </button>
@@ -216,14 +216,14 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                           <button
                             onClick={() => handleAccept(d.id)}
                             disabled={isLoading}
-                            className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="rounded-md bg-status-green px-2.5 py-1 text-xs font-medium text-surface-primary hover:bg-status-green/90 disabled:opacity-50"
                           >
                             Accept
                           </button>
                           <button
                             onClick={() => setRejectingId(d.id)}
                             disabled={isLoading}
-                            className="rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
+                            className="rounded-md bg-status-red/15 px-2.5 py-1 text-xs font-medium text-status-red hover:bg-status-red/25 disabled:opacity-50"
                           >
                             Reject
                           </button>
@@ -232,10 +232,10 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
                     </td>
                   </tr>
 
-                  {/* Expanded detail row — same pattern as pipeline page */}
+                  {/* Expanded detail row */}
                   {isExpanded && (
-                    <tr className="border-b border-slate-100">
-                      <td colSpan={8} className="bg-slate-50 px-8 py-5">
+                    <tr className="border-b border-border-subtle">
+                      <td colSpan={8} className="bg-surface-overlay px-8 py-5">
                         <ReasoningCard
                           reasoning={d.reasoning}
                           sources={d.sources || []}

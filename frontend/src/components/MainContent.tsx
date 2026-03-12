@@ -7,7 +7,7 @@ export default function MainContent({ children }: { children: React.ReactNode })
 
   return (
     <div
-      className={`min-h-screen pt-12 transition-all duration-200 lg:pt-0 ${
+      className={`min-h-screen bg-surface-primary pt-12 transition-all duration-200 lg:pt-0 ${
         collapsed ? "lg:ml-16" : "lg:ml-56"
       }`}
     >

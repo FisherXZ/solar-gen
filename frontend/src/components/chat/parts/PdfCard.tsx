@@ -19,7 +19,7 @@ export default function PdfCard({ data }: PdfCardProps) {
 
   if (data.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-lg badge-red border border-status-red/20 p-4 text-sm">
         PDF error: {data.error}
       </div>
     );
@@ -45,11 +45,11 @@ export default function PdfCard({ data }: PdfCardProps) {
   })();
 
   return (
-    <div className="bg-white p-4">
+    <div className="bg-surface-raised p-4">
       {/* PDF header card */}
-      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-overlay p-3">
         {/* PDF icon / thumbnail */}
-        <div className="flex h-12 w-10 shrink-0 items-center justify-center rounded bg-red-100">
+        <div className="flex h-12 w-10 shrink-0 items-center justify-center rounded bg-status-red/20">
           <svg
             width={20}
             height={20}
@@ -57,7 +57,7 @@ export default function PdfCard({ data }: PdfCardProps) {
             fill="none"
             stroke="currentColor"
             strokeWidth={1.5}
-            className="text-red-600"
+            className="text-status-red"
           >
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
@@ -77,10 +77,10 @@ export default function PdfCard({ data }: PdfCardProps) {
 
         {/* Info */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-slate-900" title={filename}>
+          <p className="truncate text-sm font-medium text-text-primary" title={filename}>
             {filename}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-text-secondary">
             {hostname}
             {data.page_count ? ` \u00B7 ${data.page_count} page${data.page_count !== 1 ? "s" : ""}` : ""}
             {data.pages_extracted && data.pages_extracted < (data.page_count || 0)
@@ -93,7 +93,7 @@ export default function PdfCard({ data }: PdfCardProps) {
         <div className="flex shrink-0 gap-1.5">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            className="rounded-md border border-border-default bg-surface-raised px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay"
           >
             {expanded ? "Collapse" : "View text"}
           </button>
@@ -102,7 +102,7 @@ export default function PdfCard({ data }: PdfCardProps) {
               href={data.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              className="rounded-md border border-border-default bg-surface-raised px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay"
             >
               Open
             </a>
@@ -112,8 +112,8 @@ export default function PdfCard({ data }: PdfCardProps) {
 
       {/* Expanded text */}
       {expanded && data.text && (
-        <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-slate-900 p-4">
-          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">
+        <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-border-subtle bg-surface-primary p-4">
+          <pre className="whitespace-pre-wrap text-xs leading-relaxed text-text-secondary">
             {data.text}
           </pre>
         </div>

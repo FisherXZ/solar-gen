@@ -8,8 +8,8 @@ import FilterBar from "@/components/FilterBar";
 const ProjectMap = dynamic(() => import("./ProjectMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[calc(100vh-220px)] min-h-[500px] items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-      <p className="text-slate-400">Loading map...</p>
+    <div className="flex h-[calc(100vh-220px)] min-h-[500px] items-center justify-center rounded-lg border border-border-subtle bg-surface-raised">
+      <p className="text-text-tertiary">Loading map...</p>
     </div>
   ),
 });
