@@ -43,6 +43,14 @@ async def execute(tool_input: dict) -> dict:
     from ..batch import run_batch
 
     project_ids = tool_input["project_ids"]
+    if len(project_ids) > 50:
+        return {
+            "error": f"Too many projects ({len(project_ids)}). Maximum is 50 per batch. Narrow your search or split into multiple batches.",
+            "results": [],
+            "total": 0,
+            "completed": 0,
+            "errors": 0,
+        }
     concurrency = min(tool_input.get("concurrency", 5), 10)
 
     # Fetch project records
@@ -63,12 +71,13 @@ async def execute(tool_input: dict) -> dict:
 
     # The chat agent injects this callback for SSE streaming
     progress_callback = tool_input.get("_progress_callback")
+    cancel_event = tool_input.get("_cancel_event")
 
     async def on_progress(update: dict):
         if progress_callback:
             await progress_callback(update)
 
-    batch_results = await run_batch(projects, on_progress, concurrency=concurrency)
+    batch_results = await run_batch(projects, on_progress, concurrency=concurrency, cancel_event=cancel_event)
 
     completed = sum(1 for r in batch_results if r.get("status") == "completed")
     errors = sum(1 for r in batch_results if r.get("status") == "error")

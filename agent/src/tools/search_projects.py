@@ -8,11 +8,14 @@ DEFINITION = {
     "name": "search_projects",
     "description": (
         "Search the solar project database. Returns projects matching the given "
-        "filters, sorted by capacity (largest first). Use this when users ask to "
-        "find, show, or list projects. Each result includes project_id, name, "
-        "developer, MW capacity, state, ISO region, fuel type, queue status, "
-        "and whether an EPC has been identified. Default COD window is 2025-2028. "
+        "filters. Use this when users ask to find, show, or list projects. Each "
+        "result includes project_id, name, developer, MW capacity, state, ISO "
+        "region, fuel type, queue status, lead_score (0-100), and whether an EPC "
+        "has been identified. Default COD window is 2025-2028. "
         "States are stored as two-letter abbreviations (TX, CA, IL). "
+        "lead_score ranks lead quality: higher = larger capacity, nearer COD, "
+        "solar+storage preferred. Use min_lead_score to filter and sort_by='lead_score' "
+        "to rank by score. "
         "NOTE: The epc_company field only reflects ACCEPTED discoveries. For the "
         "full picture including pending discoveries, use search_projects_with_epc."
     ),
@@ -64,6 +67,15 @@ DEFINITION = {
                 "type": "string",
                 "description": "Latest expected COD (YYYY-MM-DD). Default '2028-12-31'. Set to null to remove upper bound.",
             },
+            "min_lead_score": {
+                "type": "integer",
+                "description": "Minimum lead score (0-100). Higher scores = larger, nearer-term, solar+storage projects. Use 70+ for strong leads, 90+ for top-tier.",
+            },
+            "sort_by": {
+                "type": "string",
+                "enum": ["capacity", "lead_score"],
+                "description": "Sort results by 'capacity' (default) or 'lead_score' (highest score first).",
+            },
             "limit": {
                 "type": "integer",
                 "description": "Max results to return (default 20, max 100).",
@@ -87,6 +99,8 @@ async def execute(tool_input: dict) -> dict:
         search=tool_input.get("search"),
         cod_min=tool_input.get("cod_min", "2025-01-01"),
         cod_max=tool_input.get("cod_max", "2028-12-31"),
+        min_lead_score=tool_input.get("min_lead_score"),
+        sort_by=tool_input.get("sort_by", "capacity"),
         limit=tool_input.get("limit", 20),
     )
     return {"projects": projects, "count": len(projects)}

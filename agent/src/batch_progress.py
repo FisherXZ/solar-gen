@@ -15,6 +15,9 @@ from dataclasses import dataclass, field
 # Active batches: batch_id -> BatchState
 _batches: dict[str, "BatchState"] = {}
 
+# Conversation -> active batch_id mapping (for cancel-by-conversation)
+_conversation_batches: dict[str, str] = {}
+
 # How long to keep completed batches before cleanup (seconds)
 _CLEANUP_AFTER = 300  # 5 minutes
 
@@ -33,9 +36,12 @@ class BatchState:
     batch_id: str
     projects: list[ProjectState] = field(default_factory=list)
     done: bool = False
+    cancelled: bool = False
     created_at: float = field(default_factory=time.time)
     # Subscribers waiting for updates
     _waiters: list[asyncio.Event] = field(default_factory=list)
+    # Cancellation signal — checked by _research_one before starting work
+    _cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
 
     @property
     def total(self) -> int:
@@ -43,7 +49,7 @@ class BatchState:
 
     @property
     def completed(self) -> int:
-        return sum(1 for p in self.projects if p.status in ("completed", "skipped", "error"))
+        return sum(1 for p in self.projects if p.status in ("completed", "skipped", "error", "cancelled"))
 
     @property
     def errors(self) -> int:
@@ -66,7 +72,7 @@ class BatchState:
             self._waiters.remove(event)
 
 
-def create_batch(batch_id: str, projects: list[dict]) -> BatchState:
+def create_batch(batch_id: str, projects: list[dict], conversation_id: str | None = None) -> BatchState:
     """Register a new batch with its project list."""
     _cleanup_old()
     state = BatchState(
@@ -80,6 +86,8 @@ def create_batch(batch_id: str, projects: list[dict]) -> BatchState:
         ],
     )
     _batches[batch_id] = state
+    if conversation_id:
+        _conversation_batches[conversation_id] = batch_id
     return state
 
 
@@ -120,6 +128,40 @@ def mark_done(batch_id: str) -> None:
     if state:
         state.done = True
         state.notify_subscribers()
+
+
+def get_cancel_event(batch_id: str) -> asyncio.Event | None:
+    """Get the cancellation event for a batch (passed into run_batch)."""
+    state = _batches.get(batch_id)
+    return state._cancel_event if state else None
+
+
+def cancel_batch(batch_id: str) -> bool:
+    """Cancel a running batch. Returns True if cancelled, False if not found/already done."""
+    state = _batches.get(batch_id)
+    if not state or state.done:
+        return False
+
+    state.cancelled = True
+    # Signal all _research_one coroutines to stop before starting new work
+    state._cancel_event.set()
+
+    # Mark remaining "waiting" projects as "cancelled"
+    for p in state.projects:
+        if p.status == "waiting":
+            p.status = "cancelled"
+
+    state.done = True
+    state.notify_subscribers()
+    return True
+
+
+def cancel_batch_for_conversation(conversation_id: str) -> bool:
+    """Cancel the active batch for a conversation. Returns True if cancelled."""
+    batch_id = _conversation_batches.get(conversation_id)
+    if not batch_id:
+        return False
+    return cancel_batch(batch_id)
 
 
 def _cleanup_old() -> None:

@@ -53,7 +53,7 @@ class AgentResult(BaseModel):
     source_count: int = 0  # number of independent sources
     confidence_warning: str | None = None  # e.g. "Unverified — single low-reliability source"
     sources: list[EpcSource] = []
-    reasoning: str = ""
+    reasoning: str | dict = ""
     related_leads: list[dict] = []
     searches_performed: list[str] = []
     negative_evidence: list[NegativeEvidence] = []
@@ -174,7 +174,7 @@ class EpcDiscoveryResponse(BaseModel):
     epc_contractor: str
     confidence: str
     sources: list[dict]
-    reasoning: str | None
+    reasoning: str | dict | None
     related_leads: list[dict]
     review_status: str
     tokens_used: int

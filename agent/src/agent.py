@@ -102,16 +102,19 @@ TOOLS = [
 async def run_agent_async(
     project: dict,
     knowledge_context: str | None = None,
+    api_key: str | None = None,
 ) -> tuple[AgentResult, list[dict], int]:
     """Run the EPC discovery agent for a single project (async).
 
     Args:
         project: Project dict from DB.
         knowledge_context: Optional KB briefing to include in the prompt.
+        api_key: Optional user-provided Anthropic API key.
 
     Returns (result, agent_log, total_tokens).
     """
-    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    from .db import get_anthropic_client
+    client = get_anthropic_client(api_key)
 
     messages = [{"role": "user", "content": build_user_message(project, knowledge_context)}]
     agent_log: list[dict] = []
