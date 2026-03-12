@@ -64,13 +64,19 @@ export interface EpcSource {
   source_method?: string | null;
 }
 
+export interface StructuredReasoning {
+  summary: string;
+  supporting_evidence: string[];
+  gaps: string[];
+}
+
 export interface EpcDiscovery {
   id: string;
   project_id: string;
   epc_contractor: string;
   confidence: "confirmed" | "likely" | "possible" | "unknown";
   sources: EpcSource[];
-  reasoning: string | null;
+  reasoning: string | StructuredReasoning | null;
   related_leads: Record<string, unknown>[];
   review_status: "pending" | "accepted" | "rejected";
   agent_log: Record<string, unknown>[];

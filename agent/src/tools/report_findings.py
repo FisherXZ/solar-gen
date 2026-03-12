@@ -80,8 +80,36 @@ DEFINITION = {
                 "description": "All sources found during research, including those that didn't lead anywhere.",
             },
             "reasoning": {
-                "type": "string",
-                "description": "Explanation of how you arrived at this conclusion. Include what you verified and any counter-evidence considered.",
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string",
+                        "description": (
+                            "1-2 sentence conclusion. Reference sources with [N] "
+                            "(1-indexed, matching position in sources array). "
+                            "For 'unknown': explain why no EPC was found."
+                        ),
+                    },
+                    "supporting_evidence": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Key evidence points, strongest first. Each should cite "
+                            "a source with [N] where applicable. Include verification "
+                            "checks performed (scale, specificity, counter-evidence)."
+                        ),
+                    },
+                    "gaps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "What's missing, uncertain, or couldn't be verified. "
+                            "For 'unknown' results this should be substantial — "
+                            "explain why the EPC isn't public yet."
+                        ),
+                    },
+                },
+                "required": ["summary", "supporting_evidence", "gaps"],
             },
             "searches_performed": {
                 "type": "array",

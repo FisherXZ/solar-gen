@@ -19,10 +19,10 @@ function formatDate(dateStr: string | null): string {
 
 function ConfidenceBadge({ confidence }: { confidence: string }) {
   const cls: Record<string, string> = {
-    confirmed: "bg-emerald-100 text-emerald-700",
-    likely: "bg-orange-100 text-orange-700",
-    possible: "bg-amber-100 text-amber-700",
-    unknown: "bg-slate-100 text-slate-600",
+    confirmed: "badge-green",
+    likely: "badge-amber",
+    possible: "badge-amber",
+    unknown: "badge-neutral",
   };
   return (
     <span
@@ -35,11 +35,10 @@ function ConfidenceBadge({ confidence }: { confidence: string }) {
 
 function StatusPill({ status }: { status: string | null }) {
   const s = (status || "").toLowerCase();
-  let cls = "bg-slate-100 text-slate-600";
-  if (s.includes("active")) cls = "bg-emerald-50 text-emerald-700";
-  else if (s.includes("completed") || s.includes("done"))
-    cls = "bg-emerald-100 text-emerald-700";
-  else if (s.includes("withdrawn")) cls = "bg-red-50 text-red-600";
+  let cls = "badge-neutral";
+  if (s.includes("active")) cls = "badge-green";
+  else if (s.includes("completed") || s.includes("done")) cls = "badge-green";
+  else if (s.includes("withdrawn")) cls = "badge-red";
 
   return (
     <span
@@ -52,9 +51,9 @@ function StatusPill({ status }: { status: string | null }) {
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between border-b border-slate-100 py-3">
-      <span className="text-sm font-medium text-slate-500">{label}</span>
-      <span className="text-sm text-slate-900">{children}</span>
+    <div className="flex items-start justify-between border-b border-border-subtle py-3">
+      <span className="text-sm font-medium text-text-secondary">{label}</span>
+      <span className="text-sm text-text-primary">{children}</span>
     </div>
   );
 }
@@ -96,7 +95,7 @@ export default async function ProjectDetailPage({
       <div className="mb-6">
         <Link
           href="/"
-          className="text-sm text-slate-500 transition-colors hover:text-slate-700"
+          className="text-sm text-text-secondary transition-colors hover:text-text-primary"
         >
           &larr; Back to Pipeline
         </Link>
@@ -106,11 +105,11 @@ export default async function ProjectDetailPage({
       <div className="mb-8">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold font-serif text-text-primary">
               {project.project_name || project.queue_id}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-              <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-text-secondary">
+              <span className="badge-neutral rounded px-2 py-0.5 font-medium">
                 {project.iso_region}
               </span>
               {project.developer && <span>{project.developer}</span>}
@@ -125,8 +124,8 @@ export default async function ProjectDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Project Info */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        <div className="rounded-lg border border-border-subtle bg-surface-raised p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-text-tertiary">
             Project Details
           </h2>
           <div className="flex flex-col">
@@ -155,8 +154,8 @@ export default async function ProjectDetailPage({
         </div>
 
         {/* Location */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        <div className="rounded-lg border border-border-subtle bg-surface-raised p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-text-tertiary">
             Location
           </h2>
           <div className="flex flex-col">
@@ -174,7 +173,7 @@ export default async function ProjectDetailPage({
               href={`https://www.google.com/maps?q=${project.latitude},${project.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="mt-4 inline-flex items-center gap-2 rounded-md bg-accent-amber px-4 py-2 text-sm font-medium text-surface-primary transition-colors hover:bg-accent-amber/90"
             >
               <svg
                 className="h-4 w-4"
@@ -197,7 +196,7 @@ export default async function ProjectDetailPage({
               View on Google Maps
             </a>
           ) : (
-            <p className="mt-4 text-xs text-slate-400">
+            <p className="mt-4 text-xs text-text-tertiary">
               Coordinates not available for this project.
             </p>
           )}
@@ -205,9 +204,9 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* EPC Discovery */}
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+      <div className="mt-6 rounded-lg border border-border-subtle bg-surface-raised p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-tertiary">
             EPC Discovery
           </h2>
           <ResearchButton projectId={project.id} hasExisting={!!activeDiscovery} />
@@ -215,17 +214,17 @@ export default async function ProjectDetailPage({
         {activeDiscovery ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-xl font-bold text-slate-900">
+              <span className="text-xl font-bold text-text-primary">
                 {activeDiscovery.epc_contractor}
               </span>
               <ConfidenceBadge confidence={activeDiscovery.confidence} />
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
                   activeDiscovery.review_status === "accepted"
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "badge-green"
                     : activeDiscovery.review_status === "pending"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-red-100 text-red-700"
+                      ? "badge-amber"
+                      : "badge-red"
                 }`}
               >
                 {activeDiscovery.review_status}
@@ -238,33 +237,33 @@ export default async function ProjectDetailPage({
             />
 
             {activeDiscovery.tokens_used > 0 && (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-text-tertiary">
                 Tokens used: {activeDiscovery.tokens_used.toLocaleString()}
               </p>
             )}
           </div>
         ) : (
-          <p className="py-4 text-sm text-slate-400">
+          <p className="py-4 text-sm text-text-tertiary">
             No EPC discovery results for this project yet.
           </p>
         )}
       </div>
 
       {/* Data Source */}
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">
+      <div className="mt-6 rounded-lg border border-border-subtle bg-surface-raised p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-text-tertiary">
           Data Source
         </h2>
         <div className="flex flex-col gap-3 text-sm">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+            <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-status-amber" />
             <div>
-              <p className="font-medium text-slate-700">
+              <p className="font-medium text-text-primary">
                 {project.source === "gem_tracker"
                   ? "Global Energy Monitor — GEM Tracker"
                   : `${project.iso_region} Interconnection Queue`}
               </p>
-              <p className="mt-0.5 text-slate-500">
+              <p className="mt-0.5 text-text-secondary">
                 {project.source === "gem_tracker"
                   ? "Global database of power plants tracking capacity, ownership, and development status."
                   : `Official interconnection queue data from ${project.iso_region}. Includes queue position, capacity, fuel type, developer, and expected commercial operation date.`}
@@ -273,12 +272,12 @@ export default async function ProjectDetailPage({
           </div>
           {activeDiscovery && (
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+              <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-status-green" />
               <div>
-                <p className="font-medium text-slate-700">
+                <p className="font-medium text-text-primary">
                   EPC Discovery Agent
                 </p>
-                <p className="mt-0.5 text-slate-500">
+                <p className="mt-0.5 text-text-secondary">
                   AI-powered research using web search across trade publications, press releases, permit filings, and regulatory documents.
                   {activeDiscovery.sources.length > 0 && (
                     <span>
@@ -289,7 +288,7 @@ export default async function ProjectDetailPage({
               </div>
             </div>
           )}
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-text-tertiary">
             Last updated {formatDate(project.updated_at)}
           </p>
         </div>
@@ -297,12 +296,12 @@ export default async function ProjectDetailPage({
 
       {/* Raw Data (collapsible) */}
       {project.raw_data && (
-        <details className="mt-6 rounded-lg border border-slate-200 bg-white">
-          <summary className="cursor-pointer p-6 text-sm font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-600">
+        <details className="mt-6 rounded-lg border border-border-subtle bg-surface-raised">
+          <summary className="cursor-pointer p-6 text-sm font-semibold uppercase tracking-wider text-text-tertiary hover:text-text-secondary">
             Raw ISO Queue Data
           </summary>
-          <div className="border-t border-slate-200 p-6">
-            <pre className="max-h-96 overflow-auto rounded-md bg-slate-50 p-4 text-xs text-slate-600">
+          <div className="border-t border-border-subtle p-6">
+            <pre className="max-h-96 overflow-auto rounded-md bg-surface-overlay p-4 text-xs text-text-secondary">
               {JSON.stringify(project.raw_data, null, 2)}
             </pre>
           </div>

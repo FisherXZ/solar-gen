@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import ProjectListCard from "./parts/ProjectListCard";
 import EpcResultCard from "./parts/EpcResultCard";
 import BatchProgressCard from "./parts/BatchProgressCard";
@@ -74,7 +75,10 @@ function getProgressLabel(toolName: string, input?: Record<string, unknown>): st
     research_scratchpad: (inp) =>
       inp?.operation === "read" ? "Reading scratchpad..." : "Saving to scratchpad...",
     get_discoveries: "Loading discoveries...",
-    batch_research_epc: "Running batch research...",
+    batch_research_epc: (inp) => {
+      const ids = inp?.project_ids as string[] | undefined;
+      return ids ? `Researching ${ids.length} projects...` : "Running batch research...";
+    },
     export_csv: "Generating CSV...",
   };
 
@@ -201,6 +205,7 @@ function renderToolBody(
   output: unknown,
   input?: Record<string, unknown>,
   isLive?: boolean,
+  onBatchStatusChange?: (status: "running" | "done" | "cancelled") => void,
 ): React.ReactNode | null {
   const data = (output && typeof output === "object" ? output : {}) as Record<string, unknown>;
 
@@ -214,7 +219,7 @@ function renderToolBody(
       return <EpcResultCard data={data} />;
 
     case "batch_research_epc":
-      return <BatchProgressCard data={data} isLive={isLive} input={input} />;
+      return <BatchProgressCard data={data} isLive={isLive} input={input} onStatusChange={onBatchStatusChange} />;
 
     case "get_discoveries":
       return <DiscoveryListCard data={data} />;
@@ -227,7 +232,7 @@ function renderToolBody(
           {memories.map((m: unknown, i: number) => {
             const mem = m as Record<string, unknown>;
             return (
-              <li key={i} className="text-sm text-slate-600">
+              <li key={i} className="text-sm text-text-secondary">
                 &bull; {String(mem.content || mem.text || JSON.stringify(m))}
               </li>
             );
@@ -251,7 +256,7 @@ function renderToolBody(
       if (status === "accepted") {
         return (
           <div className="px-3 py-2">
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="rounded-full badge-green px-2.5 py-0.5 text-xs font-semibold">
               Confirmed: {epc}
             </span>
           </div>
@@ -259,7 +264,7 @@ function renderToolBody(
       }
       if (status === "rejected") {
         return (
-          <div className="px-3 py-2 text-sm text-slate-500">
+          <div className="px-3 py-2 text-sm text-text-secondary">
             Rejected{data.reason ? `: ${data.reason}` : ""}
           </div>
         );
@@ -289,24 +294,72 @@ function renderToolBody(
   }
 }
 
+function BatchStopButton() {
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation(); // don't toggle collapse
+      if (cancelling) return;
+      setCancelling(true);
+      // Dispatch event — ChatInterface listens and calls the cancel-batch endpoint
+      window.dispatchEvent(new CustomEvent("cancel-batch"));
+    },
+    [cancelling]
+  );
+
+  return (
+    <button
+      onClick={handleCancel}
+      disabled={cancelling}
+      className="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors text-text-tertiary hover:text-accent-amber hover:bg-surface-overlay disabled:opacity-40"
+      title="Stop batch"
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+        <rect width="10" height="10" rx="1" />
+      </svg>
+    </button>
+  );
+}
+
 export default function ToolPart({ toolInvocation }: ToolPartProps) {
   const { toolName, state, input, output } = toolInvocation;
-  const status = deriveStatus(state, output);
+  const [batchStatus, setBatchStatus] = useState<"running" | "done" | "cancelled" | null>(null);
+
+  const isLiveBatch =
+    toolName === "batch_research_epc" && state !== "result";
+
+  // Use batch-internal status when available (cancellation / SSE failure),
+  // otherwise fall back to AI SDK tool state
+  const status: "running" | "done" | "error" =
+    isLiveBatch && batchStatus && batchStatus !== "running"
+      ? "done"
+      : deriveStatus(state, output);
+
   const label =
-    status === "running"
-      ? getProgressLabel(toolName, input)
-      : getDoneLabel(toolName, input, output);
+    isLiveBatch && batchStatus === "cancelled"
+      ? "Batch research stopped"
+      : isLiveBatch && batchStatus === "done"
+        ? "Batch research complete"
+        : status === "running"
+          ? getProgressLabel(toolName, input)
+          : getDoneLabel(toolName, input, output);
+
   const expanded = shouldDefaultExpand(toolName, state, output);
 
   // For batch_research_epc: show live card during call state, final card on result
-  const isLiveBatch =
-    toolName === "batch_research_epc" && state !== "result";
   const body =
     state === "result" && output
       ? renderToolBody(toolName, output, input)
       : isLiveBatch
-        ? renderToolBody(toolName, {}, input, true)
+        ? renderToolBody(toolName, {}, input, true, setBatchStatus)
         : null;
+
+  // Stop button in header for running batch tools (hide once stopped)
+  const headerAction =
+    isLiveBatch && (!batchStatus || batchStatus === "running")
+      ? <BatchStopButton />
+      : undefined;
 
   return (
     <CollapsibleToolCard
@@ -314,6 +367,7 @@ export default function ToolPart({ toolInvocation }: ToolPartProps) {
       label={label}
       status={status}
       defaultExpanded={expanded}
+      headerAction={headerAction}
     >
       {body}
     </CollapsibleToolCard>

@@ -113,6 +113,15 @@ This helps calibrate confidence and prevents future research from repeating \
 dead-end searches. Negative evidence is as valuable as positive evidence for \
 building trust in your findings.
 
+## Reasoning Format
+Your reasoning in report_findings MUST use the structured format with three fields:
+- **summary**: 1-2 sentences stating your conclusion. Cite sources as [1], [2] etc.
+  (1-indexed, matching position in the sources array). For 'unknown', explain why.
+- **supporting_evidence**: Bullet points of key evidence, strongest first. Cite sources.
+  Include verification results (scale check, specificity, counter-evidence search).
+- **gaps**: What's missing or uncertain. For 'unknown' results, this should explain
+  why the EPC isn't publicly known yet (early-stage, shell company, paywalled, etc.).
+
 ## Search Strategy — Three Mandatory Phases
 
 You MUST complete all three phases in order before reporting "unknown". \
