@@ -4,15 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfidenceBadge from "./ConfidenceBadge";
 import ResearchPlanCard from "./ResearchPlanCard";
-import { apiKeyHeader } from "@/lib/api-key";
+import { agentFetch } from "@/lib/agent-fetch";
 import {
   saveResearchState,
   getResearchState,
   clearResearchState,
 } from "@/lib/research-state";
-
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
 
 const ERROR_MESSAGES: Record<string, string> = {
   api_key_missing: "API key not configured. Contact your admin.",
@@ -115,9 +112,9 @@ export default function ResearchButton({
     setStatus("planning");
     setErrorMessage("");
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover/plan`, {
+      const res = await agentFetch("/api/discover/plan", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId }),
       });
       if (!res.ok) {
@@ -144,9 +141,9 @@ export default function ResearchButton({
     setErrorMessage("");
     saveResearchState(projectId, { status: "researching", plan });
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover`, {
+      const res = await agentFetch("/api/discover", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId, plan }),
       });
       if (!res.ok) {
@@ -171,8 +168,8 @@ export default function ResearchButton({
   async function handleReviewInChat() {
     if (!result?.id) return;
     try {
-      const res = await fetch(
-        `${AGENT_API_URL}/api/discover/handoff?discovery_id=${result.id}`,
+      const res = await agentFetch(
+        `/api/discover/handoff?discovery_id=${result.id}`,
         { method: "POST" }
       );
       if (res.ok) {

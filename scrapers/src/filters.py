@@ -2,6 +2,13 @@ import pandas as pd
 from .config import MIN_MW_CAPACITY
 
 SOLAR_KEYWORDS = ["solar", "photovoltaic"]
+DEAD_STATUSES = {"withdrawn", "suspended", "cancelled"}
+
+
+def is_withdrawn(row: pd.Series) -> bool:
+    """Check if a project has a dead status (withdrawn/suspended/cancelled)."""
+    status = str(row.get("status", "")).strip().lower()
+    return status in DEAD_STATUSES
 
 
 def is_solar(row: pd.Series) -> bool:
@@ -31,5 +38,6 @@ def filter_solar_projects(df: pd.DataFrame, mw_col: str = "mw_capacity") -> pd.D
     mask = df.apply(is_solar, axis=1)
     df = df[mask].copy()
     df = df[df[mw_col] >= MIN_MW_CAPACITY]
+    df = df[~df.apply(is_withdrawn, axis=1)]
     df["fuel_type"] = df.apply(classify_fuel_type, axis=1)
     return df.reset_index(drop=True)

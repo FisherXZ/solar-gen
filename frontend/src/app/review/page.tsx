@@ -1,23 +1,21 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import ReviewQueue from "@/components/epc/ReviewQueue";
 import { PendingDiscoveryWithProject } from "@/lib/types";
+import { agentFetch } from "@/lib/agent-fetch";
 
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
+export default function ReviewPage() {
+  const [discoveries, setDiscoveries] = useState<PendingDiscoveryWithProject[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function getPendingDiscoveries(): Promise<PendingDiscoveryWithProject[]> {
-  try {
-    const res = await fetch(`${AGENT_API_URL}/api/discoveries/pending`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
-}
-
-export default async function ReviewPage() {
-  const discoveries = await getPendingDiscoveries();
+  useEffect(() => {
+    agentFetch("/api/discoveries/pending")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setDiscoveries)
+      .catch(() => setDiscoveries([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -27,7 +25,13 @@ export default async function ReviewPage() {
           Review pending EPC discoveries before they are promoted to the knowledge base.
         </p>
       </div>
-      <ReviewQueue initialDiscoveries={discoveries} />
+      {loading ? (
+        <div className="rounded-lg border border-border-subtle bg-surface-raised p-12 text-center">
+          <p className="text-sm text-text-tertiary">Loading...</p>
+        </div>
+      ) : (
+        <ReviewQueue initialDiscoveries={discoveries} />
+      )}
     </div>
   );
 }

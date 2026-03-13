@@ -165,6 +165,44 @@ def transform_caiso(sheets: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame(all_rows)
 
 
+def transform_pjm(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """Transform raw PJM Excel DataFrame to DB schema."""
+    rows = []
+    for _, r in df_raw.iterrows():
+        # mw_capacity = min(MFO, MW In Service), ignoring NaN
+        mfo = r.get("MFO")
+        mw_in_service = r.get("MW In Service")
+        mw_vals = [v for v in [mfo, mw_in_service] if pd.notna(v) and v]
+        if mw_vals:
+            try:
+                mw_capacity = float(min(mw_vals))
+            except (ValueError, TypeError):
+                mw_capacity = 0
+        else:
+            mw_capacity = 0
+
+        raw = {k: (str(v) if pd.notna(v) else None) for k, v in r.items() if k is not None and str(k) != "nan"}
+
+        rows.append({
+            "queue_id": str(r.get("Project ID", "")).strip(),
+            "iso_region": "PJM",
+            "project_name": str(r.get("Name", "")).strip() or None,
+            "developer": str(r.get("Transmission Owner", "")).strip() if pd.notna(r.get("Transmission Owner")) else None,
+            "state": str(r.get("State", "")).strip() if pd.notna(r.get("State")) else None,
+            "county": str(r.get("County", "")).strip() if pd.notna(r.get("County")) else None,
+            "mw_capacity": mw_capacity,
+            "fuel_type": str(r.get("Fuel", "")).strip() if pd.notna(r.get("Fuel")) else None,
+            "facility_type": "",
+            "generation_type": "",
+            "queue_date": safe_date(r.get("Submitted Date")),
+            "expected_cod": safe_date(r.get("Projected In Service Date")),
+            "status": str(r.get("Status", "")).strip() if pd.notna(r.get("Status")) else None,
+            "source": "iso_queue",
+            "raw_data": raw,
+        })
+    return pd.DataFrame(rows)
+
+
 US_STATE_ABBREV = {
     "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
     "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",

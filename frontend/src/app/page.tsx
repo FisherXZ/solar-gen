@@ -11,7 +11,7 @@ export default async function PipelinePage() {
       .from("projects")
       .select("*", { count: "exact" })
       .order("lead_score", { ascending: false })
-      .limit(10000),
+      .limit(1000),
     supabase
       .from("epc_discoveries")
       .select("*")
@@ -33,7 +33,7 @@ export default async function PipelinePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold font-serif text-text-primary">Pipeline</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Utility-scale solar projects from ISO interconnection queues
+          Top 1,000 utility-scale solar projects by lead score
         </p>
       </div>
       <EpcDiscoveryDashboard

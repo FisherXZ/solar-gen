@@ -10,6 +10,10 @@ MIN_MW_CAPACITY = 20
 HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (lead-gen-agent)"}
 REQUEST_TIMEOUT = 120
 
+# PJM Interconnection Queue
+PJM_QUEUE_URL = "https://services.pjm.com/PJMPlanningApi/api/Queue/ExportToXls"
+PJM_API_KEY = "E29477D0-70E0-4825-89B0-43F460BF9AB4"
+
 # GEM (Global Energy Monitor) Solar Power Tracker
 GEM_GEOJSON_FALLBACK_URL = "https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/solar/2026-02/solar_map_2026-02-05.geojson"
 GEM_CONFIG_URL = "https://raw.githubusercontent.com/GlobalEnergyMonitor/maps/gitpages-production/trackers/solar/config.js"

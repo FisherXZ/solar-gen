@@ -14,11 +14,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import anthropic
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from . import db
+from .auth import get_user_id
 from .agent_jobs import (
     cancel_job,
     cancel_job_for_conversation,
@@ -51,6 +52,11 @@ def _parse_reasoning(raw):
             pass
     return raw
 
+def require_auth(request: Request) -> str:
+    """FastAPI dependency: extract JWT, verify, return user_id."""
+    return get_user_id(request)
+
+
 app = FastAPI(title="EPC Discovery Agent")
 
 app.add_middleware(
@@ -68,7 +74,7 @@ def health():
 
 
 @app.post("/api/settings/validate-key")
-async def validate_key(request: Request):
+async def validate_key(request: Request, _user_id: str = Depends(require_auth)):
     """Validate a user-provided Anthropic API key."""
     key = request.headers.get("x-anthropic-api-key")
     if not key:
@@ -88,7 +94,7 @@ async def validate_key(request: Request):
 
 
 @app.post("/api/discover/plan")
-async def discover_plan(req: DiscoverPlanRequest, request: Request):
+async def discover_plan(req: DiscoverPlanRequest, request: Request, _user_id: str = Depends(require_auth)):
     """Generate a research plan for a project (without executing research).
 
     Returns the plan text for user review. The user can approve it and
@@ -119,7 +125,7 @@ async def discover_plan(req: DiscoverPlanRequest, request: Request):
 
 
 @app.post("/api/discover")
-async def discover(req: DiscoverRequest, request: Request):
+async def discover(req: DiscoverRequest, request: Request, _user_id: str = Depends(require_auth)):
     """Run EPC discovery for a project.
 
     Optionally accepts an approved plan from /api/discover/plan.
@@ -171,7 +177,7 @@ async def discover(req: DiscoverRequest, request: Request):
     # Store discovery for successful results or partial failures worth saving
     # (max_iterations, no_report, search_tool_error still have useful partial data)
     discovery = db.store_discovery(
-        req.project_id, result, agent_log, total_tokens, project=project
+        req.project_id, result, agent_log, total_tokens, project=project,
     )
 
     # Include error info in response if present (partial success)
@@ -186,7 +192,7 @@ async def discover(req: DiscoverRequest, request: Request):
 
 
 @app.post("/api/discover/handoff")
-async def discover_handoff(discovery_id: str = None, project_id: str = None):
+async def discover_handoff(discovery_id: str = None, project_id: str = None, _user_id: str = Depends(require_auth)):
     """Create a new chat conversation pre-loaded with research context.
 
     Provide either discovery_id or project_id. Returns the conversation_id
@@ -262,7 +268,7 @@ You can ask me questions about this research, request more investigation, or app
 
 
 @app.post("/api/discover/batch")
-async def discover_batch(req: BatchDiscoverRequest, request: Request):
+async def discover_batch(req: BatchDiscoverRequest, request: Request, _user_id: str = Depends(require_auth)):
     """Run EPC discovery on multiple projects, streaming progress via SSE."""
     api_key = request.headers.get("x-anthropic-api-key")
     if not req.project_ids:
@@ -347,7 +353,7 @@ async def discover_batch(req: BatchDiscoverRequest, request: Request):
 
 
 @app.patch("/api/discover/{discovery_id}/review")
-def review_discovery(discovery_id: str, req: ReviewRequest):
+def review_discovery(discovery_id: str, req: ReviewRequest, _user_id: str = Depends(require_auth)):
     """Accept or reject an EPC discovery."""
     if req.action not in ("accepted", "rejected"):
         raise HTTPException(status_code=400, detail="Action must be 'accepted' or 'rejected'")
@@ -401,7 +407,7 @@ def review_discovery(discovery_id: str, req: ReviewRequest):
 
 
 @app.get("/api/discoveries")
-def list_discoveries():
+def list_discoveries(_user_id: str = Depends(require_auth)):
     """List all EPC discoveries."""
     discoveries = db.list_discoveries()
     for d in discoveries:
@@ -410,7 +416,7 @@ def list_discoveries():
 
 
 @app.get("/api/discoveries/pending")
-def list_pending_discoveries():
+def list_pending_discoveries(_user_id: str = Depends(require_auth)):
     """List pending discoveries with project metadata, sorted by confidence."""
     discoveries = db.list_pending_discoveries()
     for d in discoveries:
@@ -424,13 +430,13 @@ def list_pending_discoveries():
 
 
 @app.get("/api/entities")
-def get_entities(type: str | None = None, limit: int = 50):
+def get_entities(type: str | None = None, limit: int = 50, _user_id: str = Depends(require_auth)):
     """List entities, optionally filtered by type ('developer' or 'epc')."""
     return list_entities(entity_type=type, limit=limit)
 
 
 @app.get("/api/entities/{entity_id}")
-def get_entity(entity_id: str):
+def get_entity(entity_id: str, _user_id: str = Depends(require_auth)):
     """Get an entity by ID, including its profile."""
     entity = get_entity_with_profile(entity_id)
     if not entity:
@@ -439,7 +445,7 @@ def get_entity(entity_id: str):
 
 
 @app.post("/api/entities/{entity_id}/rebuild-profile")
-def rebuild_entity_profile(entity_id: str):
+def rebuild_entity_profile(entity_id: str, _user_id: str = Depends(require_auth)):
     """Force-rebuild an entity's profile from current KB data."""
     # Verify entity exists
     client = db.get_client()
@@ -462,7 +468,7 @@ def rebuild_entity_profile(entity_id: str):
 
 
 @app.post("/api/batch/{batch_id}/cancel")
-def cancel_batch_endpoint(batch_id: str):
+def cancel_batch_endpoint(batch_id: str, _user_id: str = Depends(require_auth)):
     """Cancel a running batch research job."""
     cancelled = cancel_batch(batch_id)
     if not cancelled:
@@ -471,7 +477,7 @@ def cancel_batch_endpoint(batch_id: str):
 
 
 @app.post("/api/conversations/{conversation_id}/cancel-batch")
-def cancel_conversation_batch(conversation_id: str):
+def cancel_conversation_batch(conversation_id: str, _user_id: str = Depends(require_auth)):
     """Cancel the active batch research for a conversation (keeps the chat job alive)."""
     cancelled = cancel_batch_for_conversation(conversation_id)
     if not cancelled:
@@ -480,7 +486,7 @@ def cancel_conversation_batch(conversation_id: str):
 
 
 @app.get("/api/batch-progress/{batch_id}")
-async def batch_progress(batch_id: str):
+async def batch_progress(batch_id: str, _user_id: str = Depends(require_auth)):
     """Stream batch research progress as SSE events."""
     state = get_batch(batch_id)
     if not state:
@@ -530,7 +536,7 @@ def _batch_snapshot(state) -> dict:
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest, request: Request):
+async def chat(req: ChatRequest, request: Request, _user_id: str = Depends(require_auth)):
     """Chat with the EPC discovery agent. Streams response via SSE.
 
     The agent runs as a background task so it survives client disconnects.
@@ -656,7 +662,7 @@ async def _stream_from_job(job, cursor: int = 0):
 
 
 @app.get("/api/chat-stream/{job_id}")
-async def chat_stream(job_id: str, cursor: int = Query(default=0)):
+async def chat_stream(job_id: str, cursor: int = Query(default=0), _user_id: str = Depends(require_auth)):
     """Reconnect to a running or completed agent job's SSE stream."""
     job = get_job(job_id)
     if not job:
@@ -674,7 +680,7 @@ async def chat_stream(job_id: str, cursor: int = Query(default=0)):
 
 
 @app.post("/api/jobs/{job_id}/cancel")
-def cancel_agent_job(job_id: str):
+def cancel_agent_job(job_id: str, _user_id: str = Depends(require_auth)):
     """Cancel a running agent job."""
     cancelled = cancel_job(job_id)
     if not cancelled:
@@ -683,7 +689,7 @@ def cancel_agent_job(job_id: str):
 
 
 @app.post("/api/conversations/{conversation_id}/cancel")
-def cancel_conversation_job(conversation_id: str):
+def cancel_conversation_job(conversation_id: str, _user_id: str = Depends(require_auth)):
     """Cancel the active agent job for a conversation.
 
     Fallback for when the frontend doesn't have the job ID yet
@@ -696,19 +702,19 @@ def cancel_conversation_job(conversation_id: str):
 
 
 @app.get("/api/conversations/{conversation_id}/status")
-def conversation_status(conversation_id: str):
+def conversation_status(conversation_id: str, _user_id: str = Depends(require_auth)):
     """Check if an agent job is currently running for a conversation."""
     active = get_active_job_for_conversation(conversation_id)
     return {"active_job_id": active.job_id if active else None}
 
 
 @app.get("/api/conversations")
-def get_conversations():
+def get_conversations(_user_id: str = Depends(require_auth)):
     """List recent chat conversations."""
     return db.list_conversations()
 
 
 @app.get("/api/conversations/{conversation_id}/messages")
-def get_conversation_messages(conversation_id: str):
+def get_conversation_messages(conversation_id: str, _user_id: str = Depends(require_auth)):
     """Get all messages for a conversation."""
     return db.get_conversation_messages(conversation_id)

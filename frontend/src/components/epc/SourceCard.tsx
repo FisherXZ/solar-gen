@@ -1,6 +1,7 @@
 "use client";
 
 import { EpcSource } from "@/lib/types";
+import SourceQualityBadges from "./SourceQualityBadges";
 
 interface SourceCardProps {
   source: EpcSource;
@@ -76,6 +77,42 @@ function getSourceLink(source: EpcSource): {
   return null;
 }
 
+const CITATION_RATIONALE: Record<string, string> = {
+  regulatory_filing: "This regulatory filing directly names the EPC contractor",
+  sec_filing: "Found in a legally binding SEC filing",
+  epc_portfolio: "Found on the contractor's own portfolio page",
+  company_website: "Listed on the company's official website",
+  developer_pr: "Announced by the project developer",
+  trade_publication: "Reported by an industry trade publication",
+  news_article: "Covered by a news outlet",
+  permit_filing: "Referenced in a permit or planning filing",
+  linkedin: "Found on a LinkedIn profile or post",
+  conference: "Mentioned at an industry conference or event",
+};
+
+function WhyCited({ source }: { source: EpcSource }) {
+  const rationale = CITATION_RATIONALE[source.channel];
+  if (!rationale) return null;
+
+  return (
+    <details className="mt-2 group">
+      <summary className="cursor-pointer text-[11px] font-medium text-text-tertiary hover:text-text-secondary transition-colors list-none flex items-center gap-1">
+        <svg
+          className="h-3 w-3 transition-transform group-open:rotate-90"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+        Why cited?
+      </summary>
+      <p className="mt-1 text-xs text-text-tertiary">{rationale}</p>
+    </details>
+  );
+}
+
 export default function SourceCard({ source }: SourceCardProps) {
   const reliabilityColor =
     RELIABILITY_COLORS[source.reliability] || RELIABILITY_COLORS.low;
@@ -96,6 +133,7 @@ export default function SourceCard({ source }: SourceCardProps) {
               </span>
             )}
           </div>
+          <SourceQualityBadges source={source} />
           <span
             className={`inline-block h-2 w-2 rounded-full ${reliabilityColor}`}
             title={`${source.reliability} reliability`}
@@ -126,6 +164,9 @@ export default function SourceCard({ source }: SourceCardProps) {
           {link.label}
         </a>
       )}
+
+      {/* Why cited? */}
+      <WhyCited source={source} />
     </div>
   );
 }

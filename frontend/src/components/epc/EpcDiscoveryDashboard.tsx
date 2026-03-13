@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Project, EpcDiscovery, ConstructionStatus } from "@/lib/types";
 import ConfidenceBadge from "./ConfidenceBadge";
 import ResearchPlanCard from "./ResearchPlanCard";
-import { apiKeyHeader } from "@/lib/api-key";
+import { agentFetch } from "@/lib/agent-fetch";
 import {
   saveResearchState,
   getResearchState,
@@ -32,8 +32,6 @@ type ResearchStatus = "idle" | "planning" | "plan_ready" | "researching" | "done
 
 const PAGE_SIZE = 25;
 
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
 
 const CONSTRUCTION_LABELS: Record<string, string> = {
   unknown: "Unknown",
@@ -440,7 +438,7 @@ export default function EpcDiscoveryDashboard({
         <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3">
           <p className="text-sm text-text-secondary">
             {sorted.length > 0
-              ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sorted.length)} of ${sorted.length.toLocaleString()}`
+              ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sorted.length)} of top ${sorted.length.toLocaleString()} by lead score`
               : "0 results"}
           </p>
           <div className="flex gap-2">
@@ -555,9 +553,9 @@ function ProjectRow({
     setErrorMessage("");
     onToggleExpand(); // expand the row
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover/plan`, {
+      const res = await agentFetch("/api/discover/plan", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: project.id }),
       });
       if (!res.ok) {
@@ -582,9 +580,9 @@ function ProjectRow({
     setErrorMessage("");
     saveResearchState(project.id, { status: "researching", plan });
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover`, {
+      const res = await agentFetch("/api/discover", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...apiKeyHeader() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: project.id, plan }),
       });
       if (!res.ok) {

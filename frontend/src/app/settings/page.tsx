@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useApiKey, apiKeyHeader } from "@/lib/api-key";
-
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
+import { useApiKey } from "@/lib/api-key";
+import { agentFetch } from "@/lib/agent-fetch";
 
 export default function SettingsPage() {
   const { apiKey, setApiKey, clearApiKey } = useApiKey();
@@ -30,7 +28,7 @@ export default function SettingsPage() {
     setErrorDetail("");
 
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/settings/validate-key`, {
+      const res = await agentFetch("/api/settings/validate-key", {
         method: "POST",
         headers: { "X-Anthropic-API-Key": key },
       });

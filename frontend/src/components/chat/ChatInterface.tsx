@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiKeyHeader } from "@/lib/api-key";
+import { agentFetch, agentHeaders, AGENT_API_URL } from "@/lib/agent-fetch";
 import ChatMessage from "./ChatMessage";
 import FileAttachment from "./FileAttachment";
 import SuggestedPrompts from "./SuggestedPrompts";
@@ -39,8 +39,6 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
 
 interface Conversation {
   id: string;
@@ -77,7 +75,8 @@ export default function ChatInterface() {
         body: () => ({ conversation_id: conversationIdRef.current }),
         fetch: async (url, init) => {
           const headers = new Headers(init?.headers);
-          for (const [k, v] of Object.entries(apiKeyHeader())) {
+          const authHdrs = await agentHeaders();
+          for (const [k, v] of Object.entries(authHdrs)) {
             headers.set(k, v);
           }
           const res = await globalThis.fetch(url, { ...init, headers });
@@ -115,13 +114,11 @@ export default function ChatInterface() {
     function handleCancelBatch() {
       const cid = conversationIdRef.current;
       if (!cid) return;
-      globalThis
-        .fetch(`${AGENT_API_URL}/api/conversations/${cid}/cancel-batch`, {
-          method: "POST",
-        })
-        .catch(() => {
-          // best-effort
-        });
+      agentFetch(`/api/conversations/${cid}/cancel-batch`, {
+        method: "POST",
+      }).catch(() => {
+        // best-effort
+      });
     }
     window.addEventListener("cancel-batch", handleCancelBatch);
     return () => window.removeEventListener("cancel-batch", handleCancelBatch);
@@ -135,7 +132,7 @@ export default function ChatInterface() {
   // Load conversation list
   const loadConversations = useCallback(async () => {
     try {
-      const res = await globalThis.fetch(`${AGENT_API_URL}/api/conversations`);
+      const res = await agentFetch("/api/conversations");
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
@@ -168,8 +165,8 @@ export default function ChatInterface() {
     jobIdRef.current = null;
 
     try {
-      const res = await globalThis.fetch(
-        `${AGENT_API_URL}/api/conversations/${id}/messages`
+      const res = await agentFetch(
+        `/api/conversations/${id}/messages`
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -192,8 +189,8 @@ export default function ChatInterface() {
 
       // Check if an agent job is still running for this conversation
       try {
-        const statusRes = await globalThis.fetch(
-          `${AGENT_API_URL}/api/conversations/${id}/status`
+        const statusRes = await agentFetch(
+          `/api/conversations/${id}/status`
         );
         if (statusRes.ok) {
           const statusData = await statusRes.json();
@@ -217,8 +214,8 @@ export default function ChatInterface() {
     setReconnecting(true);
 
     try {
-      const res = await globalThis.fetch(
-        `${AGENT_API_URL}/api/chat-stream/${jobId}?cursor=0`,
+      const res = await agentFetch(
+        `/api/chat-stream/${jobId}?cursor=0`,
         { signal: abort.signal }
       );
       if (!res.ok || !res.body) {
@@ -310,8 +307,8 @@ export default function ChatInterface() {
       try {
         const convId = conversationIdRef.current;
         if (convId) {
-          const res = await globalThis.fetch(
-            `${AGENT_API_URL}/api/conversations/${convId}/messages`
+          const res = await agentFetch(
+            `/api/conversations/${convId}/messages`
           );
           if (res.ok) {
             const data = await res.json();
@@ -369,7 +366,7 @@ export default function ChatInterface() {
     const cid = conversationIdRef.current;
     if (jid) {
       try {
-        await globalThis.fetch(`${AGENT_API_URL}/api/jobs/${jid}/cancel`, {
+        await agentFetch(`/api/jobs/${jid}/cancel`, {
           method: "POST",
         });
       } catch {
@@ -379,8 +376,8 @@ export default function ChatInterface() {
     } else if (cid) {
       // Fallback: user hit stop before response headers arrived (no job ID yet)
       try {
-        await globalThis.fetch(
-          `${AGENT_API_URL}/api/conversations/${cid}/cancel`,
+        await agentFetch(
+          `/api/conversations/${cid}/cancel`,
           { method: "POST" }
         );
       } catch {

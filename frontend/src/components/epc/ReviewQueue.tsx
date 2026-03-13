@@ -4,9 +4,7 @@ import React, { useState } from "react";
 import ConfidenceBadge from "@/components/epc/ConfidenceBadge";
 import ReasoningCard from "@/components/epc/ReasoningCard";
 import { PendingDiscoveryWithProject } from "@/lib/types";
-
-const AGENT_API_URL =
-  process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
+import { agentFetch } from "@/lib/agent-fetch";
 
 interface ReviewQueueProps {
   initialDiscoveries: PendingDiscoveryWithProject[];
@@ -34,7 +32,7 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
     setLoadingId(id);
     setError(null);
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover/${id}/review`, {
+      const res = await agentFetch(`/api/discover/${id}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "accepted" }),
@@ -57,7 +55,7 @@ export default function ReviewQueue({ initialDiscoveries }: ReviewQueueProps) {
     setLoadingId(id);
     setError(null);
     try {
-      const res = await fetch(`${AGENT_API_URL}/api/discover/${id}/review`, {
+      const res = await agentFetch(`/api/discover/${id}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "rejected", reason: rejectReason.trim() }),

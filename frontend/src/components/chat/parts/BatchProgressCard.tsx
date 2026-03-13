@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { toast } from "sonner";
 import ConfidenceBadge from "@/components/epc/ConfidenceBadge";
 
 const AGENT_API_URL =
@@ -193,11 +194,30 @@ export default function BatchProgressCard({
     };
   }, [isLive, batchId, liveDone]);
 
-  // Notify parent of status changes
+  // Notify parent of status changes + fire toast
+  const toastFired = useRef(false);
   useEffect(() => {
     if (liveCancelled) onStatusChange?.("cancelled");
     else if (liveDone) onStatusChange?.("done");
-  }, [liveDone, liveCancelled, onStatusChange]);
+
+    if ((liveDone || liveCancelled) && !toastFired.current && liveProjects) {
+      toastFired.current = true;
+      const found = liveProjects.filter(
+        (p) => p.status === "completed" && p.epc_contractor
+      ).length;
+      const total = liveProjects.length;
+
+      if (liveCancelled) {
+        toast("Batch research stopped", {
+          description: `${found} EPC${found !== 1 ? "s" : ""} found before cancellation`,
+        });
+      } else {
+        toast.success("Batch research complete", {
+          description: `${found} of ${total} project${total !== 1 ? "s" : ""} matched an EPC`,
+        });
+      }
+    }
+  }, [liveDone, liveCancelled, onStatusChange, liveProjects]);
 
   // Auto-scroll log to bottom
   useEffect(() => {

@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import { EpcSource, StructuredReasoning } from "@/lib/types";
 import SourceCard from "./SourceCard";
+import CitationTooltip from "./CitationTooltip";
+import SourceRail from "./SourceRail";
 
 /* ------------------------------------------------------------------ */
 /*  Type guard                                                         */
@@ -18,12 +20,14 @@ function isStructured(r: unknown): r is StructuredReasoning {
 
 function CitationBadge({
   index,
+  source,
   onClick,
 }: {
   index: number;
+  source?: EpcSource;
   onClick: () => void;
 }) {
-  return (
+  const badge = (
     <button
       type="button"
       onClick={onClick}
@@ -32,6 +36,16 @@ function CitationBadge({
       {index}
     </button>
   );
+
+  if (source) {
+    return (
+      <CitationTooltip index={index} source={source}>
+        {badge}
+      </CitationTooltip>
+    );
+  }
+
+  return badge;
 }
 
 /* ------------------------------------------------------------------ */
@@ -40,17 +54,20 @@ function CitationBadge({
 
 function renderWithCitations(
   text: string,
-  onCitationClick: (index: number) => void
+  onCitationClick: (index: number) => void,
+  sources?: EpcSource[]
 ): React.ReactNode[] {
   const parts = text.split(/(\[\d+\])/g);
   return parts.map((part, i) => {
     const match = part.match(/^\[(\d+)\]$/);
     if (match) {
       const idx = parseInt(match[1], 10);
+      const source = sources?.[idx - 1];
       return (
         <CitationBadge
           key={i}
           index={idx}
+          source={source}
           onClick={() => onCitationClick(idx)}
         />
       );
@@ -179,9 +196,14 @@ export default function ReasoningCard({
       {/* Structured reasoning (new discoveries) */}
       {structured && (
         <div className="space-y-4 p-4">
+          {/* Source Rail — Perplexity-style pills above the answer */}
+          {sources.length > 0 && (
+            <SourceRail sources={sources} onSourceClick={handleCitationClick} />
+          )}
+
           {/* Summary */}
           <p className="text-[15px] leading-relaxed text-text-primary">
-            {renderWithCitations(structured.summary, handleCitationClick)}
+            {renderWithCitations(structured.summary, handleCitationClick, sources)}
           </p>
 
           {/* Supporting Evidence */}
@@ -200,7 +222,7 @@ export default function ReasoningCard({
                       {i + 1}
                     </span>
                     <span>
-                      {renderWithCitations(item, handleCitationClick)}
+                      {renderWithCitations(item, handleCitationClick, sources)}
                     </span>
                   </li>
                 ))}

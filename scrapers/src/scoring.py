@@ -1,45 +1,36 @@
 import pandas as pd
 from datetime import date
 
+STATUS_SCORES = {
+    # Under construction — actively building, need robots NOW
+    "construction": 40,
+    "under construction": 40,
+    "engineering and procurement": 40,
+    "partially in service - under construction": 40,
+    "under_construction": 40,
+    # Active / pre-construction — in queue, planning
+    "active": 30,
+    "pre-construction": 30,
+    "pre_construction": 30,
+    "announced": 25,
+    # Completed / operating — too late
+    "completed": 10,
+    "done": 10,
+    "in service": 10,
+    "partially in service": 10,
+    "operating": 10,
+}
+
 
 def score_lead(row: pd.Series) -> int:
-    """Score a solar lead 0-100 based on basic heuristics."""
+    """Score a solar lead 0-100 based on status, timeline, capacity, and storage."""
     score = 0
 
-    # Capacity: bigger projects are higher value
-    mw = row.get("mw_capacity") or 0
-    if mw >= 500:
-        score += 30
-    elif mw >= 200:
-        score += 25
-    elif mw >= 100:
-        score += 20
-    elif mw >= 50:
-        score += 15
-    else:
-        score += 10
+    # Status (0-40): dominant signal
+    status = str(row.get("status", "")).strip().lower()
+    score += STATUS_SCORES.get(status, 5)
 
-    # Status: active/construction is better
-    status = str(row.get("status", "")).lower()
-    source = str(row.get("source", "")).lower()
-    if source == "gem_tracker":
-        # GEM projects: construction status is the key signal
-        if "construction" in status:
-            score += 30  # Actively being built — EPC is engaged
-        elif "pre-construction" in status:
-            score += 20  # EPC selection imminent
-        elif "announced" in status:
-            score += 10
-        else:
-            score += 5
-    elif "active" in status:
-        score += 25
-    elif "completed" in status or "done" in status:
-        score += 10
-    else:
-        score += 5
-
-    # Timeline: projects expected to complete within 3 years score higher
+    # Timeline (0-25): near-term COD is higher value
     cod = row.get("expected_cod")
     if cod and not pd.isna(cod):
         try:
@@ -49,19 +40,30 @@ def score_lead(row: pd.Series) -> int:
                 cod = cod.date()
             years_out = (cod - date.today()).days / 365
             if 0 < years_out <= 2:
-                score += 30
+                score += 25
             elif 2 < years_out <= 3:
-                score += 20
+                score += 15
             elif 3 < years_out <= 5:
-                score += 10
+                score += 5
         except (ValueError, TypeError):
             pass
 
-    # Solar+Storage is higher value
-    if row.get("fuel_type") == "Solar+Storage":
+    # Capacity (5-20): bigger projects are higher value
+    mw = row.get("mw_capacity") or 0
+    if mw >= 500:
+        score += 20
+    elif mw >= 200:
         score += 15
+    elif mw >= 100:
+        score += 12
+    elif mw >= 50:
+        score += 8
     else:
         score += 5
+
+    # Solar+Storage bonus (0-15)
+    if row.get("fuel_type") == "Solar+Storage":
+        score += 15
 
     return min(score, 100)
 

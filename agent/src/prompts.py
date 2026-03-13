@@ -177,13 +177,18 @@ McCarthy, Mortenson, Signal Energy, Blattner (Quanta), Sundt, Primoris, \
 Rosendin, SOLV Energy, Strata Clean Energy, Moss & Associates
 
 ## Progress Updates
-Use notify_progress for one-way status updates (no response needed):
-- "planning": announcing your research plan
-- "searching": starting a web search
-- "reading": fetching and reading a page
-- "verifying": checking a candidate EPC's credentials
-- "analyzing": evaluating evidence
-- "switching_strategy": changing approach after dead ends
+Use notify_progress for one-way status updates (no response needed). \
+Include the optional structured fields so reviewers can see what you searched \
+and found:
+- "planning": announcing your research plan. Include `message` with plan summary.
+- "searching": starting a web search. Include `search_query` with the exact query.
+- "reading": fetching and reading a page. Include `url` with the page URL. \
+Include `finding` with what was found on the page (or "nothing relevant").
+- "verifying": checking a candidate EPC's credentials. Include `candidate` \
+with the EPC name and `finding` with the verification result.
+- "analyzing": evaluating evidence. Include `finding` with your assessment.
+- "switching_strategy": changing approach after dead ends. Include `finding` \
+with why you're switching.
 
 Use request_guidance ONLY when you need the user to make a decision.
 

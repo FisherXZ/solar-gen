@@ -1,6 +1,9 @@
 """Store a key fact in persistent memory for use across conversations."""
 
 from __future__ import annotations
+import logging
+
+log = logging.getLogger(__name__)
 
 DEFINITION = {
     "name": "remember",
@@ -68,5 +71,7 @@ async def execute(tool_input: dict) -> dict:
             project_id=tool_input.get("project_id"),
         )
     except Exception as e:
+        log.error("remember tool failed: %s | key=%s scope=%s", e,
+                  tool_input.get("memory_key"), scope)
         return {"error": f"Failed to save memory: {str(e)}"}
     return {"status": "remembered", "id": result.get("id")}

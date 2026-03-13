@@ -140,13 +140,13 @@ def store_discovery(
 
 def list_discoveries() -> list[dict]:
     client = get_client()
-    resp = (
+    return (
         client.table("epc_discoveries")
         .select("*")
         .order("created_at", desc=True)
         .execute()
+        .data
     )
-    return resp.data
 
 
 def list_pending_discoveries() -> list[dict]:
@@ -464,17 +464,15 @@ def search_memories(
 def upsert_scratch(session_id: str, key: str, value: dict) -> dict:
     """Upsert a scratchpad entry for a research session."""
     client = get_client()
+    data = {
+        "session_id": session_id,
+        "key": key,
+        "value": value,
+        "updated_at": "now()",
+    }
     resp = (
         client.table("research_scratch")
-        .upsert(
-            {
-                "session_id": session_id,
-                "key": key,
-                "value": value,
-                "updated_at": "now()",
-            },
-            on_conflict="session_id,key",
-        )
+        .upsert(data, on_conflict="session_id,key")
         .execute()
     )
     return resp.data[0] if resp.data else {}
@@ -515,38 +513,35 @@ def save_message(
     parts: list | None = None,
 ) -> dict:
     client = get_client()
-    resp = (
-        client.table("chat_messages")
-        .insert({
-            "conversation_id": conversation_id,
-            "role": role,
-            "content": content,
-            "parts": parts or [],
-        })
-        .execute()
-    )
+    data = {
+        "conversation_id": conversation_id,
+        "role": role,
+        "content": content,
+        "parts": parts or [],
+    }
+    resp = client.table("chat_messages").insert(data).execute()
     return resp.data[0]
 
 
 def get_conversation_messages(conversation_id: str) -> list[dict]:
     client = get_client()
-    resp = (
+    return (
         client.table("chat_messages")
         .select("*")
         .eq("conversation_id", conversation_id)
         .order("created_at")
         .execute()
+        .data
     )
-    return resp.data
 
 
 def list_conversations(limit: int = 20) -> list[dict]:
     client = get_client()
-    resp = (
+    return (
         client.table("chat_conversations")
         .select("*")
         .order("updated_at", desc=True)
         .limit(limit)
         .execute()
+        .data
     )
-    return resp.data

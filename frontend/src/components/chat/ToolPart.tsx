@@ -8,7 +8,7 @@ import DiscoveryListCard from "./parts/DiscoveryListCard";
 import GuidanceCard from "./parts/GuidanceCard";
 import CsvCard from "./parts/CsvCard";
 import PdfCard from "./parts/PdfCard";
-import ProgressNotificationCard from "./parts/ProgressNotificationCard";
+import ResearchTrailEntry from "./parts/ResearchTrailEntry";
 import DiscoveryApprovalCard from "./parts/DiscoveryApprovalCard";
 import CollapsibleToolCard from "./CollapsibleToolCard";
 import { EpcSource } from "@/lib/types";
@@ -70,6 +70,8 @@ function getProgressLabel(toolName: string, input?: Record<string, unknown>): st
       inp?.action === "rejected" ? "Rejecting discovery..." : "Approving discovery...",
     notify_progress: (inp) => {
       const stage = String(inp?.stage || "").replace("_", " ");
+      if (inp?.search_query) return `${stage}: "${inp.search_query}"`;
+      if (inp?.candidate) return `${stage}: ${inp.candidate}`;
       return inp?.message ? `${stage}: ${inp.message}` : `Progress: ${stage}`;
     },
     research_scratchpad: (inp) =>
@@ -149,6 +151,8 @@ function getDoneLabel(
           : "Processing review...";
     case "notify_progress": {
       const stage = String(input?.stage || "").replace("_", " ");
+      if (data.search_query) return `${stage}: "${data.search_query}"`;
+      if (data.candidate) return `${stage}: ${data.candidate}`;
       return data.message ? `${stage}: ${data.message}` : `Progress: ${stage}`;
     }
     case "research_scratchpad":
@@ -245,7 +249,7 @@ function renderToolBody(
       return <GuidanceCard data={data as { status_summary?: string; question?: string; options?: string[]; awaiting_response?: boolean; error?: string }} />;
 
     case "notify_progress":
-      return <ProgressNotificationCard data={data as { stage?: string; message?: string; detail?: string }} />;
+      return <ResearchTrailEntry data={data as { stage?: string; message?: string; detail?: string; search_query?: string; url?: string; finding?: string; candidate?: string }} />;
 
     case "request_discovery_review":
       return <DiscoveryApprovalCard data={data as { discovery_id?: string; epc_contractor?: string; confidence?: string; sources?: EpcSource[]; source_summary?: string[]; assessment?: string; awaiting_review?: boolean; status?: string; message?: string; error?: string }} />;

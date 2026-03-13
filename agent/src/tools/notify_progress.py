@@ -31,6 +31,22 @@ DEFINITION = {
                 "type": "string",
                 "description": "Optional extra context.",
             },
+            "search_query": {
+                "type": "string",
+                "description": "The search query executed (for stage=searching).",
+            },
+            "url": {
+                "type": "string",
+                "description": "The page URL being read (for stage=reading).",
+            },
+            "finding": {
+                "type": "string",
+                "description": "What was found or eliminated.",
+            },
+            "candidate": {
+                "type": "string",
+                "description": "EPC candidate name if one was found.",
+            },
         },
         "required": ["stage", "message"],
     },

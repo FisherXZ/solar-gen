@@ -19,6 +19,14 @@ def upsert_projects(client: Client, records: list[dict]) -> int:
     return len(result.data)
 
 
+def delete_withdrawn(client: Client) -> int:
+    """Delete withdrawn/suspended/cancelled projects from DB."""
+    result = client.table("projects").delete().in_(
+        "status", ["Withdrawn", "WITHDRAWN", "Suspended", "SUSPENDED", "Cancelled", "CANCELLED"]
+    ).execute()
+    return len(result.data)
+
+
 def log_scrape_start(client: Client, iso_region: str) -> str:
     """Log the start of a scrape run. Returns the run ID."""
     result = client.table("scrape_runs").insert({

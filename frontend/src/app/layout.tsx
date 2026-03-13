@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { SidebarProvider } from "@/components/SidebarContext";
 import { ApiKeyProvider } from "@/lib/api-key";
+import { AuthProvider } from "@/lib/auth";
+import { Toaster } from "sonner";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import Sidebar from "@/components/Sidebar";
 import MainContent from "@/components/MainContent";
 import "./globals.css";
@@ -38,12 +41,29 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} font-sans antialiased`}
       >
-        <ApiKeyProvider>
-          <SidebarProvider>
-            <Sidebar />
-            <MainContent>{children}</MainContent>
-          </SidebarProvider>
-        </ApiKeyProvider>
+        <AuthProvider>
+          <ApiKeyProvider>
+            <Tooltip.Provider delayDuration={300}>
+              <SidebarProvider>
+                <Sidebar />
+                <MainContent>{children}</MainContent>
+              </SidebarProvider>
+            </Tooltip.Provider>
+          </ApiKeyProvider>
+        </AuthProvider>
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "#252320",
+              border: "1px solid rgba(255, 248, 235, 0.08)",
+              color: "#FFF8EB",
+              fontFamily: "var(--font-geist-sans)",
+              fontSize: "13px",
+            },
+          }}
+        />
       </body>
     </html>
   );

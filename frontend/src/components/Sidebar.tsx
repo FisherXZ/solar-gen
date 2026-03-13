@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./SidebarContext";
+import { useAuth } from "@/lib/auth";
 
 const NAV_ITEMS = [
   {
@@ -61,6 +62,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
+  const { user, signOut } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -130,6 +132,43 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        {/* User info + sign out */}
+        {user && (
+          <div className={`border-t border-border-subtle px-3 py-3 ${collapsed ? "lg:px-2" : ""}`}>
+            <div className={`flex items-center gap-2 ${collapsed ? "lg:justify-center" : ""}`}>
+              {user.user_metadata?.avatar_url ? (
+                <img
+                  src={user.user_metadata.avatar_url}
+                  alt=""
+                  className="h-6 w-6 shrink-0 rounded-full"
+                />
+              ) : (
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-amber-muted text-xs font-medium text-accent-amber">
+                  {(user.email?.[0] || "?").toUpperCase()}
+                </div>
+              )}
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-text-primary">
+                    {user.user_metadata?.full_name || user.email}
+                  </p>
+                </div>
+              )}
+              {!collapsed && (
+                <button
+                  onClick={signOut}
+                  className="shrink-0 rounded-md p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
+                  title="Sign out"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Collapse toggle — desktop only */}
         <button
