@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Project, EpcDiscovery, ConstructionStatus } from "@/lib/types";
 import ConfidenceBadge from "./ConfidenceBadge";
 import ResearchPlanCard from "./ResearchPlanCard";
+import ActiveResearchBanner from "./ActiveResearchBanner";
 import { agentFetch } from "@/lib/agent-fetch";
 import {
   saveResearchState,
@@ -147,7 +148,7 @@ export default function EpcDiscoveryDashboard({
   const [page, setPage] = useState(0);
 
   // Expanded research plan row
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Unique states for dropdown
   const states = useMemo(() => {
@@ -280,6 +281,41 @@ export default function EpcDiscoveryDashboard({
     setDiscoveries((prev) => [d, ...prev]);
   }
 
+  function handleScrollToProject(projectId: string) {
+    // Find in sorted array (current filter set)
+    let idx = sorted.findIndex((p) => p.id === projectId);
+
+    // If filtered out, clear filters and search in full list
+    if (idx === -1) {
+      setFilterState("");
+      setFilterResearch("");
+      setFilterConstruction("");
+      setCodYearFrom(0);
+      setCodYearTo(0);
+      setSearchQuery("");
+      // After clearing filters, sorted will update — but we need the
+      // unfiltered index. Projects array is the full set; sort order
+      // matches lead_score desc by default after filter reset.
+      // We'll find it in projects and estimate page.
+      idx = projects.findIndex((p) => p.id === projectId);
+    }
+
+    if (idx === -1) return;
+
+    const targetPage = Math.floor(idx / PAGE_SIZE);
+    setPage(targetPage);
+    setExpandedIds((prev) => new Set(prev).add(projectId));
+
+    // Scroll after React renders the new page
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document
+          .getElementById(`project-row-${projectId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+    });
+  }
+
   const COLUMNS: {
     key: SortField;
     label: string;
@@ -287,15 +323,20 @@ export default function EpcDiscoveryDashboard({
     { key: "lead_score", label: "Score" },
     { key: "project_name", label: "Project" },
     { key: "epc_contractor", label: "EPC Contractor" },
-    { key: "confidence", label: "Confidence" },
-    { key: "review_status", label: "Status" },
-    { key: "construction_status", label: "Status" },
+    { key: "review_status", label: "Review" },
+    { key: "construction_status", label: "Construction" },
     { key: "queue_date", label: "Queue Date" },
     { key: "expected_cod", label: "Expected COD" },
   ];
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Active research banner */}
+      <ActiveResearchBanner
+        projects={projects}
+        onScrollToProject={handleScrollToProject}
+      />
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
         <select
@@ -418,11 +459,14 @@ export default function EpcDiscoveryDashboard({
                       key={project.id}
                       project={project}
                       discovery={discovery}
-                      isExpanded={expandedId === project.id}
+                      isExpanded={expandedIds.has(project.id)}
                       onToggleExpand={() =>
-                        setExpandedId(
-                          expandedId === project.id ? null : project.id
-                        )
+                        setExpandedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(project.id)) next.delete(project.id);
+                          else next.add(project.id);
+                          return next;
+                        })
                       }
                       onDiscoveryCreated={handleDiscoveryCreated}
                       columnCount={COLUMNS.length}
@@ -622,6 +666,7 @@ function ProjectRow({
     <>
       {/* Main data row — clicks navigate to detail page */}
       <tr
+        id={`project-row-${project.id}`}
         onClick={() => router.push(`/projects/${project.id}`)}
         className="cursor-pointer border-b border-border-subtle transition-colors hover:bg-surface-overlay"
       >
@@ -654,15 +699,6 @@ function ProjectRow({
             <span className="font-medium text-text-primary">
               {discovery.epc_contractor}
             </span>
-          ) : (
-            <span className="text-text-tertiary">—</span>
-          )}
-        </td>
-
-        {/* Confidence */}
-        <td className="px-4 py-3">
-          {discovery ? (
-            <ConfidenceBadge confidence={discovery.confidence} />
           ) : (
             <span className="text-text-tertiary">—</span>
           )}
@@ -705,11 +741,14 @@ function ProjectRow({
             </button>
           )}
           {researchStatus === "idle" && !isExpanded && discovery && (
-            <span className="inline-flex items-center gap-1 badge-green rounded-full px-3 py-1 text-xs font-medium">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              Done
+            <span className="inline-flex items-center gap-2">
+              <ConfidenceBadge confidence={discovery.confidence} />
+              <Link
+                href={`/projects/${project.id}`}
+                className="inline-flex items-center rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+              >
+                View details
+              </Link>
             </span>
           )}
           {researchStatus === "planning" && (
@@ -739,12 +778,7 @@ function ProjectRow({
           )}
           {researchStatus === "done" && result && (
             <span className="inline-flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 badge-green rounded-full px-3 py-1 text-xs font-medium">
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-                {result.epc_contractor || "Unknown"}
-              </span>
+              <ConfidenceBadge confidence={result.confidence} />
               <Link
                 href={`/projects/${project.id}`}
                 className="inline-flex items-center rounded-full border border-border-default bg-surface-overlay px-3 py-1 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"

@@ -28,6 +28,8 @@ from .tools import check_tool_health, execute_tool, get_tools
 
 MODEL = os.environ.get("RESEARCH_MODEL", "claude-sonnet-4-6")
 MAX_ITERATIONS = 25
+# At this iteration, strip all tools except report_findings to force conclusion
+HARD_STOP_ITERATION = 22
 
 # Tools available during standalone research
 RESEARCH_TOOLS = [
@@ -46,13 +48,16 @@ logger = logging.getLogger(__name__)
 
 
 @retry(
-    retry=retry_if_exception_type(anthropic.RateLimitError),
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=2, min=2, max=10),
+    retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APIStatusError)),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
     reraise=True,
+    before_sleep=lambda rs: logging.getLogger(__name__).warning(
+        "API retry #%d: %s", rs.attempt_number, rs.outcome.exception()
+    ),
 )
 async def _call_api(client, **kwargs):
-    """Call Anthropic API with automatic retry on rate limits."""
+    """Call Anthropic API with automatic retry on transient errors."""
     return await client.messages.create(**kwargs)
 
 
@@ -91,17 +96,19 @@ async def run_research(
 
     # Track parsed tool results for health checking
     recent_tool_outputs: list[dict] = []
+    # Effective iteration counter — notify_progress-only turns don't count
+    effective_iteration = 0
 
     for iteration in range(MAX_ITERATIONS):
         # Completeness checkpoint (Harvey AI pattern): at iterations 6, 12, 18
         # evaluate what the agent has done and inject guidance into the last
         # tool result.  Gentle → Firm → Mandatory escalation.
-        if iteration in CHECKPOINTS and len(messages) > 1:
-            check = evaluate_completeness(iteration, agent_log, recent_tool_outputs)
+        if effective_iteration in CHECKPOINTS and len(messages) > 1:
+            check = evaluate_completeness(effective_iteration, agent_log, recent_tool_outputs)
             agent_log.append({"completeness_check": check})
             logger.info(
-                "Completeness check at iteration %d: %s (%s)",
-                iteration, check["recommendation"], check["level"],
+                "Completeness check at effective iteration %d (raw %d): %s (%s)",
+                effective_iteration, iteration, check["recommendation"], check["level"],
             )
             if check["message"]:
                 # Inject into last tool_result message (append-only — preserves KV cache)
@@ -111,6 +118,25 @@ async def run_research(
                     and last_msg["content"]
                 ):
                     last_msg["content"][-1]["content"] += check["message"]
+
+        # Hard stop: at iteration 22+, strip all tools except report_findings
+        # to force the agent to conclude. The mandatory checkpoint at 18 is a
+        # text nudge the agent can ignore; this is structural — it literally
+        # cannot call anything else.
+        if effective_iteration >= HARD_STOP_ITERATION:
+            active_tools = [t for t in cached_tools if t["name"] == "report_findings"]
+            hard_stop_msg = (
+                "\n\nSYSTEM: You have exhausted your research budget. "
+                "The ONLY tool available to you now is report_findings. "
+                "Call it immediately with your best assessment."
+            )
+            # Inject into the last tool result
+            if len(messages) > 1:
+                last_msg = messages[-1]
+                if isinstance(last_msg.get("content"), list) and last_msg["content"]:
+                    last_msg["content"][-1]["content"] += hard_stop_msg
+        else:
+            active_tools = cached_tools
 
         try:
             response = await _call_api(
@@ -122,7 +148,7 @@ async def run_research(
                     "text": RESEARCH_SYSTEM_PROMPT,
                     "cache_control": {"type": "ephemeral"},
                 }],
-                tools=cached_tools,
+                tools=active_tools,
                 messages=messages,
             )
         except anthropic.AuthenticationError as exc:
@@ -217,6 +243,17 @@ async def run_research(
         # If report_findings was called, we're done
         if report_result is not None:
             return report_result, agent_log, total_tokens
+
+        # Count this turn toward the effective budget only if the agent did
+        # real work (search, fetch, KB query, etc.). Turns that only call
+        # notify_progress or research_scratchpad are "status-only" and don't
+        # count — they waste the iteration budget otherwise.
+        tool_names_this_turn = {
+            block.name for block in response.content if block.type == "tool_use"
+        }
+        substantive_tools = tool_names_this_turn - {"notify_progress", "research_scratchpad"}
+        if substantive_tools:
+            effective_iteration += 1
 
         # 3b: Check for consecutive tool errors — if 3+, tell agent to wrap up
         healthy, health_msg = check_tool_health(recent_tool_outputs)

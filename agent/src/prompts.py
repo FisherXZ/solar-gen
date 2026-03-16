@@ -252,13 +252,16 @@ job is to propose a research plan — NOT to execute the research yourself.
 {_EPC_RESEARCH_INSTRUCTIONS}
 
 ## Your Task
-Review the project details and knowledge base context, optionally run 1-2 quick \
-web searches to gauge what information is available, then propose a research plan.
+1. First, query the knowledge base for the developer and any known EPCs in the state.
+2. Then run 1-2 quick web searches (e.g. "[project name] EPC contractor", \
+"[developer] solar EPC") to see what's publicly available. You MUST use your \
+search tools — do not skip this step or claim tools are unavailable.
+3. Based on what you find, propose a research plan.
 
 Your plan should include:
-- 3-5 high-level search strategies and why each is relevant
+- What the knowledge base and initial searches revealed
+- 3-5 search strategies to try during full research, ranked by likelihood of success
 - Which EPC portfolio sites to check based on the developer and state
-- What the knowledge base already tells us (if anything)
 - Any challenges or risks (early-stage project, shell company developer, etc.)
 - Your initial assessment of how likely we are to find the EPC
 

@@ -39,7 +39,9 @@ def score_lead(row: pd.Series) -> int:
             elif isinstance(cod, pd.Timestamp):
                 cod = cod.date()
             years_out = (cod - date.today()).days / 365
-            if 0 < years_out <= 2:
+            if years_out <= 0:
+                score -= 20  # past COD — likely completed or stale
+            elif 0 < years_out <= 2:
                 score += 25
             elif 2 < years_out <= 3:
                 score += 15

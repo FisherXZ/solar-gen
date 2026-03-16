@@ -19,6 +19,7 @@ export function saveResearchState(
   try {
     const entry: PersistedResearchState = { ...state, timestamp: Date.now() };
     sessionStorage.setItem(KEY_PREFIX + projectId, JSON.stringify(entry));
+    window.dispatchEvent(new CustomEvent("research-state-changed"));
   } catch {
     // SSR or private browsing — no-op
   }
@@ -44,6 +45,7 @@ export function getResearchState(
 export function clearResearchState(projectId: string): void {
   try {
     sessionStorage.removeItem(KEY_PREFIX + projectId);
+    window.dispatchEvent(new CustomEvent("research-state-changed"));
   } catch {
     // no-op
   }
@@ -51,4 +53,36 @@ export function clearResearchState(projectId: string): void {
 
 export function hasActiveResearch(projectId: string): boolean {
   return getResearchState(projectId) !== null;
+}
+
+export interface ActiveResearchEntry {
+  projectId: string;
+  status: PersistedResearchState["status"];
+  plan: string;
+}
+
+export function getAllActiveResearch(): ActiveResearchEntry[] {
+  const entries: ActiveResearchEntry[] = [];
+  try {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (!key || !key.startsWith(KEY_PREFIX)) continue;
+      const projectId = key.slice(KEY_PREFIX.length);
+      const raw = sessionStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const parsed: PersistedResearchState = JSON.parse(raw);
+        if (Date.now() - parsed.timestamp > TTL_MS) {
+          sessionStorage.removeItem(key);
+          continue;
+        }
+        entries.push({ projectId, status: parsed.status, plan: parsed.plan });
+      } catch {
+        // corrupt entry — skip
+      }
+    }
+  } catch {
+    // SSR or private browsing
+  }
+  return entries;
 }

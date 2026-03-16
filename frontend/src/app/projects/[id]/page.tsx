@@ -87,6 +87,19 @@ export default async function ProjectDetailPage({
     (d: EpcDiscovery) => d.review_status !== "rejected"
   );
 
+  // Supabase returns reasoning as TEXT — parse JSON string to object
+  // so ReasoningCard can render structured reasoning with citations
+  if (activeDiscovery && typeof activeDiscovery.reasoning === "string") {
+    try {
+      const parsed = JSON.parse(activeDiscovery.reasoning);
+      if (typeof parsed === "object" && parsed !== null && "summary" in parsed) {
+        activeDiscovery.reasoning = parsed;
+      }
+    } catch {
+      // keep as string — ReasoningCard handles legacy string format
+    }
+  }
+
   const hasCoordinates = project.latitude != null && project.longitude != null;
 
   return (
