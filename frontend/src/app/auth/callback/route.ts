@@ -6,7 +6,13 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`);
+    // Capture error details from Supabase/OAuth provider redirect
+    const errorDesc =
+      searchParams.get("error_description") ||
+      searchParams.get("error") ||
+      "No authorization code received";
+    const message = encodeURIComponent(errorDesc);
+    return NextResponse.redirect(`${origin}/login?error=auth&message=${message}`);
   }
 
   const response = NextResponse.redirect(origin);

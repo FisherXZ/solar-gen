@@ -51,6 +51,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Check if user's email is still in the allowlist
+  const email = user.email?.toLowerCase();
+  if (email) {
+    const { data } = await supabase
+      .from("allowed_emails")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (!data) {
+      // Email was removed from allowlist — sign out and redirect
+      await supabase.auth.signOut();
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set("error", "auth");
+      loginUrl.searchParams.set("message", "Your access has been revoked.");
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return response;
 }
 
