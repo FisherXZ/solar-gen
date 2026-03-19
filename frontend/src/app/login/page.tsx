@@ -1,7 +1,8 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 function getSupabase() {
   return createBrowserClient(
@@ -11,8 +12,27 @@ function getSupabase() {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState<"google" | "github" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const urlError = searchParams.get("error");
+    if (urlError === "auth") {
+      const message = searchParams.get("message");
+      return message || "This email is not authorized. Contact your admin for access.";
+    }
+    if (urlError === "no_code") {
+      return "Authentication failed. Please try again.";
+    }
+    return null;
+  });
 
   async function handleOAuth(provider: "google" | "github") {
     setLoading(provider);

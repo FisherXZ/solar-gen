@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=auth`);
+    const message = encodeURIComponent(error.message || "Authentication failed");
+    return NextResponse.redirect(`${origin}/login?error=auth&message=${message}`);
   }
 
   return response;
