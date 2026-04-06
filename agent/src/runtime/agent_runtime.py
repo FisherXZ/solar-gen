@@ -50,6 +50,16 @@ class AgentRuntime:
         self.user_id = user_id
         self._client: anthropic.AsyncAnthropic | None = None
 
+        # Pre-compute cached system prompt and tools (immutable per runtime)
+        self._cached_system = [{
+            "type": "text",
+            "text": self.system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }]
+        self._cached_tools = list(self.tools)
+        if self._cached_tools:
+            self._cached_tools[-1] = {**self._cached_tools[-1], "cache_control": {"type": "ephemeral"}}
+
     async def run_turn(
         self,
         messages: list[dict],
@@ -194,22 +204,11 @@ class AgentRuntime:
             self._client = anthropic.AsyncAnthropic(api_key=self._api_key)
         client = self._client
 
-        # Apply prompt caching
-        cached_system = [{
-            "type": "text",
-            "text": self.system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }]
-
-        cached_tools = list(self.tools)
-        if cached_tools:
-            cached_tools[-1] = {**cached_tools[-1], "cache_control": {"type": "ephemeral"}}
-
         return await client.messages.create(
             model=self.model,
             max_tokens=4096,
-            system=cached_system,
-            tools=cached_tools if cached_tools else anthropic.NOT_GIVEN,
+            system=self._cached_system,
+            tools=self._cached_tools if self._cached_tools else anthropic.NOT_GIVEN,
             messages=messages,
         )
 
