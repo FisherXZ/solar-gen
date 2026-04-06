@@ -594,6 +594,11 @@ def save_message(
     content: str,
     parts: list | None = None,
     user_id: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    cache_read_tokens: int | None = None,
+    cache_write_tokens: int | None = None,
+    iterations: int | None = None,
 ) -> dict:
     client = get_client()
     # Validate ownership if user_id is provided
@@ -609,14 +614,57 @@ def save_message(
             raise PermissionError(
                 f"Conversation {conversation_id} does not belong to user {user_id}"
             )
-    data = {
+    data: dict = {
         "conversation_id": conversation_id,
         "role": role,
         "content": content,
         "parts": parts or [],
     }
+    if input_tokens is not None:
+        data["input_tokens"] = input_tokens
+    if output_tokens is not None:
+        data["output_tokens"] = output_tokens
+    if cache_read_tokens is not None:
+        data["cache_read_tokens"] = cache_read_tokens
+    if cache_write_tokens is not None:
+        data["cache_write_tokens"] = cache_write_tokens
+    if iterations is not None:
+        data["iterations"] = iterations
     resp = client.table("chat_messages").insert(data).execute()
     return resp.data[0]
+
+
+def log_chat_event(
+    conversation_id: str,
+    turn_number: int,
+    event_type: str,
+    data: dict,
+) -> None:
+    """Write one event row to chat_events.
+
+    Synchronous (uses existing sync Supabase client).
+    Always call via asyncio.create_task(asyncio.to_thread(log_chat_event, ...))
+    so it runs in a thread pool and never blocks the event loop.
+    Failures are logged and swallowed — never raised to the caller.
+    """
+    try:
+        client = get_client()
+        client.table("chat_events").insert(
+            {
+                "conversation_id": conversation_id,
+                "turn_number": turn_number,
+                "event_type": event_type,
+                "data": data,
+            }
+        ).execute()
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "chat_event write failed: %s conversation=%s",
+            event_type,
+            conversation_id,
+        )
 
 
 def get_conversation_messages(conversation_id: str, user_id: str | None = None) -> list[dict]:
