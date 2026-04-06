@@ -113,11 +113,31 @@ async def execute_tool(name: str, tool_input: dict) -> dict:
 
     Catches common error types and returns structured error dicts.
     Unknown/unexpected exceptions are re-raised.
+
+    If the tool module defines an `Input` Pydantic model, `tool_input` is
+    validated against it before dispatch.  On failure a structured
+    ``validation_error`` dict is returned.  On success, ``model_dump()`` is
+    forwarded so that field defaults are always applied.
     """
     if name not in _REGISTRY:
         raise KeyError(f"Unknown tool: {name}. Available: {list(_REGISTRY.keys())}")
+
+    mod = _REGISTRY[name]
+
+    # Pydantic validation for tools that declare an Input model
+    if hasattr(mod, "Input"):
+        try:
+            from pydantic import ValidationError
+            validated = mod.Input(**tool_input)
+            tool_input = validated.model_dump()
+        except ValidationError as exc:
+            return {
+                "error": f"Invalid input for {name}: {exc.errors()}",
+                "error_category": "validation_error",
+            }
+
     try:
-        return await _REGISTRY[name].execute(tool_input)
+        return await mod.execute(tool_input)
     except KeyError as exc:
         return {
             "error": f"API key not configured for {name}",
