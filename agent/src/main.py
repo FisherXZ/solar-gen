@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import traceback
 import uuid
 
@@ -1192,8 +1193,14 @@ async def _run_agent_job_v2(
         mark_job_done(job.job_id, error=db.sanitize_key_from_string(traceback.format_exc()[:500]))
 
 
-async def _stream_from_job(job, cursor: int = 0):
-    """Yield SSE events from a job, starting at cursor. Safe to disconnect."""
+async def _stream_from_job(job, cursor: int = 0, ping_interval: float = 15.0):
+    """Yield SSE events from a job, starting at cursor. Safe to disconnect.
+
+    Emits an SSE comment (`: ping`) every ping_interval seconds while idle
+    to keep the connection alive through proxies and load balancers.
+    """
+    last_ping = time.monotonic()
+
     while True:
         # Replay any events we haven't sent yet
         while cursor < len(job.events):
@@ -1204,8 +1211,19 @@ async def _stream_from_job(job, cursor: int = 0):
         if job.done:
             break
 
-        # Wait for more events
-        await job.wait_for_update(timeout=2.0)
+        # Emit a ping comment if idle too long
+        now = time.monotonic()
+        if now - last_ping >= ping_interval:
+            yield ": ping\n\n"
+            last_ping = now
+            # Re-check done after yielding (caller may have marked done)
+            if job.done:
+                break
+
+        # Wait for more events, but wake up in time to send the next ping
+        now = time.monotonic()
+        wait_timeout = min(2.0, max(0.0, ping_interval - (now - last_ping)))
+        await job.wait_for_update(timeout=wait_timeout)
 
 
 @app.get("/api/chat-stream/{job_id}")
