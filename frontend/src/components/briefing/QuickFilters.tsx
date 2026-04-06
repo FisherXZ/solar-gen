@@ -29,22 +29,22 @@ export function QuickFilters({ filters, onChange }: QuickFiltersProps) {
           onClick={() => onChange({ ...filters, region: r.value })}
           className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium transition-colors ${
             filters.region === r.value
-              ? "bg-[--accent-amber-muted] text-[--accent-amber]"
-              : "bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text-primary]"
+              ? "bg-accent-amber-muted text-accent-amber"
+              : "bg-surface-overlay text-text-secondary hover:text-text-primary"
           }`}
         >
           {r.label}
         </button>
       ))}
-      <div className="w-px h-4 bg-[--border-subtle] mx-1" />
+      <div className="w-px h-4 bg-border-subtle mx-1" />
       {TIME_RANGES.map((t) => (
         <button
           key={t.value}
           onClick={() => onChange({ ...filters, timeRange: t.value })}
           className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium transition-colors ${
             filters.timeRange === t.value
-              ? "bg-[--accent-amber-muted] text-[--accent-amber]"
-              : "bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text-primary]"
+              ? "bg-accent-amber-muted text-accent-amber"
+              : "bg-surface-overlay text-text-secondary hover:text-text-primary"
           }`}
         >
           {t.label}

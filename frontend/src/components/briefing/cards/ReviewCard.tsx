@@ -39,35 +39,35 @@ export function ReviewCard({ event, onDismiss }: ReviewCardProps) {
   }
 
   const confidenceColor = {
-    confirmed: "text-[--status-green]",
-    likely: "text-[--accent-amber]",
-    possible: "text-[--text-tertiary]",
-    unknown: "text-[--text-tertiary]",
+    confirmed: "text-status-green",
+    likely: "text-accent-amber",
+    possible: "text-text-tertiary",
+    unknown: "text-text-tertiary",
   }[event.confidence];
 
   return (
-    <div className="bg-[--surface-raised] border border-[--accent-amber-muted] rounded-lg p-5">
+    <div className="bg-surface-raised border border-accent-amber-muted rounded-lg p-5">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--accent-amber-muted] text-[--accent-amber]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-accent-amber-muted text-accent-amber">
               Needs Review
             </span>
             <span className={`text-xs font-sans font-medium capitalize ${confidenceColor}`}>
               {event.confidence}
             </span>
           </div>
-          <h3 className="font-serif text-lg text-[--text-primary]">
+          <h3 className="font-serif text-lg text-text-primary">
             {event.epc_contractor}
           </h3>
-          <p className="text-sm text-[--text-secondary]">
+          <p className="text-sm text-text-secondary">
             {event.project_name}
             {event.mw_capacity && ` · ${event.mw_capacity} MW`}
           </p>
         </div>
       </div>
 
-      <p className="text-sm text-[--text-secondary] mb-4">
+      <p className="text-sm text-text-secondary mb-4">
         {event.reasoning_summary}
         {event.source_url && /^https?:\/\//i.test(event.source_url) && (
           <>
@@ -76,7 +76,7 @@ export function ReviewCard({ event, onDismiss }: ReviewCardProps) {
               href={event.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[--accent-amber] hover:underline"
+              className="text-accent-amber hover:underline"
             >
               Source
             </a>
@@ -84,24 +84,24 @@ export function ReviewCard({ event, onDismiss }: ReviewCardProps) {
         )}
       </p>
 
-      <div className="flex items-center gap-3 pt-3 border-t border-[--border-subtle]">
+      <div className="flex items-center gap-3 pt-3 border-t border-border-subtle">
         <button
           onClick={() => handleReview("accepted")}
           disabled={submitting}
-          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-[--status-green]/15 text-[--status-green] hover:bg-[--status-green]/25 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-status-green/15 text-status-green hover:bg-status-green/25 disabled:opacity-50 transition-colors"
         >
           Approve
         </button>
         <button
           onClick={() => handleReview("rejected")}
           disabled={submitting}
-          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-[--status-red]/15 text-[--status-red] hover:bg-[--status-red]/25 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-status-red/15 text-status-red hover:bg-status-red/25 disabled:opacity-50 transition-colors"
         >
           Reject
         </button>
         <button
           onClick={handleInvestigate}
-          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text-primary] transition-colors ml-auto"
+          className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-surface-overlay text-text-secondary hover:text-text-primary transition-colors ml-auto"
         >
           Investigate
         </button>

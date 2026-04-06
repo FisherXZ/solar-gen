@@ -51,16 +51,16 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
 
   if (event.type === "new_project") {
     return (
-      <div className="bg-[--surface-raised] rounded-lg p-4">
+      <div className="bg-surface-raised rounded-lg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--surface-overlay] text-[--text-tertiary] mb-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-surface-overlay text-text-tertiary mb-1">
               New Project
             </span>
-            <h3 className="font-serif text-base text-[--text-primary]">
+            <h3 className="font-serif text-base text-text-primary">
               {event.project_name}
             </h3>
-            <p className="text-sm text-[--text-secondary]">
+            <p className="text-sm text-text-secondary">
               {event.developer && `${event.developer} · `}
               {event.mw_capacity && `${event.mw_capacity} MW · `}
               {event.iso_region}
@@ -71,13 +71,13 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
             <button
               onClick={handleResearchEpc}
               disabled={researching}
-              className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-[--accent-amber-muted] text-[--accent-amber] hover:bg-[--accent-amber]/25 disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-accent-amber-muted text-accent-amber hover:bg-accent-amber/25 disabled:opacity-50 transition-colors"
             >
               {researching ? "Researching\u2026" : "Research EPC"}
             </button>
             <button
               onClick={() => onDismiss(event.id)}
-              className="px-2 py-1.5 text-xs text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
+              className="px-2 py-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
             >
               Dismiss
             </button>
@@ -88,19 +88,19 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
   }
 
   return (
-    <div className="bg-[--surface-raised] rounded-lg p-4">
+    <div className="bg-surface-raised rounded-lg p-4">
       <div className="flex items-start justify-between">
         <div>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--surface-overlay] text-[--text-tertiary] mb-1">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-surface-overlay text-text-tertiary mb-1">
             Status Change
           </span>
-          <h3 className="font-serif text-base text-[--text-primary]">
+          <h3 className="font-serif text-base text-text-primary">
             {event.project_name}
           </h3>
-          <p className="text-sm text-[--text-secondary]">
+          <p className="text-sm text-text-secondary">
             {STATUS_LABELS[event.previous_status] || event.previous_status}
             {" → "}
-            <span className="text-[--text-primary] font-medium">
+            <span className="text-text-primary font-medium">
               {STATUS_LABELS[event.new_status] || event.new_status}
             </span>
             {event.expected_cod && ` · COD: ${event.expected_cod}`}
@@ -109,13 +109,13 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => onExpand(event.project_id)}
-            className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text-primary] transition-colors"
+            className="px-3 py-1.5 text-xs font-sans font-medium rounded bg-surface-overlay text-text-secondary hover:text-text-primary transition-colors"
           >
             Details
           </button>
           <button
             onClick={() => onDismiss(event.id)}
-            className="px-2 py-1.5 text-xs text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
+            className="px-2 py-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
           >
             Dismiss
           </button>
