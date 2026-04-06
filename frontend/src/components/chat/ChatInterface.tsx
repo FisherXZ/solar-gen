@@ -71,6 +71,19 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
   // Track the current job ID for potential reconnection
   const jobIdRef = useRef<string | null>(null);
 
+  // Tracks the next cursor position for reconnection (= last seen id: N, + 1)
+  const cursorRef = useRef(0);
+
+  // Tracks how many auto-retries have been attempted for the current job
+  const retryCountRef = useRef(0);
+
+  // Resets all job-tracking state when switching conversations or stopping
+  const resetJobState = useCallback((clearJobId = true) => {
+    if (clearJobId) jobIdRef.current = null;
+    cursorRef.current = 0;
+    retryCountRef.current = 0;
+  }, []);
+
   // Stable transport — body uses a resolver function so it reads the ref each time
   const transport = useMemo(
     () =>
@@ -91,7 +104,37 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
             loadConversations();
           }
           const jid = res.headers.get("x-job-id");
-          if (jid) jobIdRef.current = jid;
+          if (jid) {
+            jobIdRef.current = jid;
+            resetJobState(false); // reset cursor + retries, keep new job ID
+          }
+
+          // Wrap body to track the last SSE id: field seen (for reconnection cursor)
+          if (res.body) {
+            let lineBuffer = "";
+            const decoder = new TextDecoder();
+            const wrappedBody = res.body.pipeThrough(
+              new TransformStream<Uint8Array, Uint8Array>({
+                transform(chunk, controller) {
+                  lineBuffer += decoder.decode(chunk, { stream: true });
+                  const lines = lineBuffer.split("\n");
+                  lineBuffer = lines.pop() ?? "";
+                  for (const line of lines) {
+                    const match = line.match(/^id: (\d+)$/);
+                    if (match) {
+                      cursorRef.current = parseInt(match[1], 10) + 1;
+                    }
+                  }
+                  controller.enqueue(chunk);
+                },
+              })
+            );
+            return new Response(wrappedBody, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers,
+            });
+          }
           return res;
         },
       }),
@@ -103,123 +146,8 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
 
   const isLoading = status === "submitted" || status === "streaming" || reconnecting;
 
-  // Listen for GuidanceCard button clicks to populate chat input
-  useEffect(() => {
-    function handlePopulate(e: Event) {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.text) setInputValue(detail.text);
-    }
-    window.addEventListener("populate-chat-input", handlePopulate);
-    return () => window.removeEventListener("populate-chat-input", handlePopulate);
-  }, []);
-
-  // Listen for batch cancel requests from BatchStopButton
-  useEffect(() => {
-    function handleCancelBatch() {
-      const cid = conversationIdRef.current;
-      if (!cid) return;
-      agentFetch(`/api/conversations/${cid}/cancel-batch`, {
-        method: "POST",
-      }).catch(() => {
-        // best-effort
-      });
-    }
-    window.addEventListener("cancel-batch", handleCancelBatch);
-    return () => window.removeEventListener("cancel-batch", handleCancelBatch);
-  }, []);
-
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Load conversation list
-  const loadConversations = useCallback(async () => {
-    try {
-      const res = await agentFetch("/api/conversations");
-      if (res.ok) {
-        const data = await res.json();
-        setConversations(data);
-        return data as Conversation[];
-      }
-    } catch {
-      // silently fail
-    }
-    return [];
-  }, []);
-
-  // On mount: load conversations and resume the most recent one,
-  // or auto-send initialContext if provided
-  const initialContextRef = useRef(initialContext);
-  useEffect(() => {
-    if (initialContextRef.current) {
-      // Start a new conversation with the pre-loaded context
-      sendMessage({ text: initialContextRef.current });
-      initialContextRef.current = undefined;
-    } else {
-      loadConversations().then((convs) => {
-        if (convs.length > 0) {
-          loadConversation(convs[0].id);
-        }
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load a past conversation, and reconnect if an agent job is still running
-  async function loadConversation(id: string) {
-    // Stop any active useChat stream (prevents conv A's events leaking into conv B)
-    stop();
-    // Cancel any existing reconnection stream
-    reconnectAbortRef.current?.abort();
-    setReconnecting(false);
-    // Clear stale job ID from previous conversation
-    jobIdRef.current = null;
-
-    try {
-      const res = await agentFetch(
-        `/api/conversations/${id}/messages`
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-
-      const loaded: UIMessage[] = data.map(
-        (m: { id: string; role: string; content: string; parts?: unknown[] }) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          parts:
-            m.parts && m.parts.length > 0
-              ? m.parts
-              : [{ type: "text" as const, text: m.content }],
-        })
-      );
-
-      setMessages(loaded);
-      setConversationId(id);
-      conversationIdRef.current = id;
-      setSidebarOpen(false);
-
-      // Check if an agent job is still running for this conversation
-      try {
-        const statusRes = await agentFetch(
-          `/api/conversations/${id}/status`
-        );
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          if (statusData.active_job_id) {
-            reconnectToJob(statusData.active_job_id);
-          }
-        }
-      } catch {
-        // Status check failed — not critical
-      }
-    } catch {
-      // silently fail
-    }
-  }
-
   // Reconnect to a running agent job's SSE stream
-  async function reconnectToJob(jobId: string) {
+  const reconnectToJob = useCallback(async (jobId: string, cursor: number = 0) => {
     jobIdRef.current = jobId;
     const abort = new AbortController();
     reconnectAbortRef.current = abort;
@@ -227,7 +155,7 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
 
     try {
       const res = await agentFetch(
-        `/api/chat-stream/${jobId}?cursor=0`,
+        `/api/chat-stream/${jobId}?cursor=${cursor}`,
         { signal: abort.signal }
       );
       if (!res.ok || !res.body) {
@@ -346,6 +274,145 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
         // Best effort reload
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-retry when useChat stream drops mid-flight
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if (prev === "streaming" || prev === "submitted") {
+      if (
+        status === "error" &&
+        jobIdRef.current !== null &&
+        cursorRef.current > 0 &&
+        retryCountRef.current < 3
+      ) {
+        retryCountRef.current += 1;
+        const jobId = jobIdRef.current;
+        const cursor = cursorRef.current;
+        reconnectToJob(jobId, cursor);
+      } else if (status !== "error") {
+        // Stream completed successfully — reset retry counter
+        retryCountRef.current = 0;
+      }
+    }
+  }, [status, reconnectToJob]);
+
+  // Listen for GuidanceCard button clicks to populate chat input
+  useEffect(() => {
+    function handlePopulate(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.text) setInputValue(detail.text);
+    }
+    window.addEventListener("populate-chat-input", handlePopulate);
+    return () => window.removeEventListener("populate-chat-input", handlePopulate);
+  }, []);
+
+  // Listen for batch cancel requests from BatchStopButton
+  useEffect(() => {
+    function handleCancelBatch() {
+      const cid = conversationIdRef.current;
+      if (!cid) return;
+      agentFetch(`/api/conversations/${cid}/cancel-batch`, {
+        method: "POST",
+      }).catch(() => {
+        // best-effort
+      });
+    }
+    window.addEventListener("cancel-batch", handleCancelBatch);
+    return () => window.removeEventListener("cancel-batch", handleCancelBatch);
+  }, []);
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Load conversation list
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await agentFetch("/api/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data);
+        return data as Conversation[];
+      }
+    } catch {
+      // silently fail
+    }
+    return [];
+  }, []);
+
+  // On mount: load conversations and resume the most recent one,
+  // or auto-send initialContext if provided
+  const initialContextRef = useRef(initialContext);
+  useEffect(() => {
+    if (initialContextRef.current) {
+      // Start a new conversation with the pre-loaded context
+      sendMessage({ text: initialContextRef.current });
+      initialContextRef.current = undefined;
+    } else {
+      loadConversations().then((convs) => {
+        if (convs.length > 0) {
+          loadConversation(convs[0].id);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load a past conversation, and reconnect if an agent job is still running
+  async function loadConversation(id: string) {
+    // Stop any active useChat stream (prevents conv A's events leaking into conv B)
+    stop();
+    // Cancel any existing reconnection stream
+    reconnectAbortRef.current?.abort();
+    setReconnecting(false);
+    // Clear stale job ID from previous conversation
+    resetJobState();
+
+    try {
+      const res = await agentFetch(
+        `/api/conversations/${id}/messages`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const loaded: UIMessage[] = data.map(
+        (m: { id: string; role: string; content: string; parts?: unknown[] }) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          parts:
+            m.parts && m.parts.length > 0
+              ? m.parts
+              : [{ type: "text" as const, text: m.content }],
+        })
+      );
+
+      setMessages(loaded);
+      setConversationId(id);
+      conversationIdRef.current = id;
+      setSidebarOpen(false);
+
+      // Check if an agent job is still running for this conversation
+      try {
+        const statusRes = await agentFetch(
+          `/api/conversations/${id}/status`
+        );
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.active_job_id) {
+            reconnectToJob(statusData.active_job_id);
+          }
+        }
+      } catch {
+        // Status check failed — not critical
+      }
+    } catch {
+      // silently fail
+    }
   }
 
   // Start a new conversation
@@ -356,7 +423,7 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
     setMessages([]);
     setConversationId(null);
     conversationIdRef.current = null;
-    jobIdRef.current = null;
+    resetJobState();
     setSidebarOpen(false);
   }
 
@@ -384,7 +451,7 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
       } catch {
         // Best effort
       }
-      jobIdRef.current = null;
+      resetJobState();
     } else if (cid) {
       // Fallback: user hit stop before response headers arrived (no job ID yet)
       try {
@@ -395,6 +462,7 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
       } catch {
         // Best effort
       }
+      resetJobState(false);
     }
   }
 

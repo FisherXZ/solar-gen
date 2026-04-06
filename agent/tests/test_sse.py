@@ -8,10 +8,10 @@ from src.sse import StreamWriter
 
 
 def _parse(sse_line: str) -> dict:
-    """Parse a single SSE data line into a dict."""
-    assert sse_line.startswith("data: ")
-    assert sse_line.endswith("\n\n")
-    return json.loads(sse_line[6:].strip())
+    """Parse a single SSE event string into a dict (skips id: lines)."""
+    lines = sse_line.strip().split("\n")
+    data_line = next(line for line in lines if line.startswith("data: "))
+    return json.loads(data_line[6:])
 
 
 class TestMessageLifecycle:
@@ -140,7 +140,7 @@ class TestFullStream:
         for e in events:
             if e.startswith("data: [DONE]"):
                 types.append("DONE")
-            elif e.startswith("data: "):
+            elif "data: " in e:
                 types.append(_parse(e)["type"])
 
         assert types == [
@@ -157,3 +157,39 @@ class TestFullStream:
             "finish",
             "DONE",
         ]
+
+
+class TestSequenceNumbers:
+    def test_id_field_present(self):
+        sw = StreamWriter()
+        event = sw.start()
+        assert "id: " in event
+
+    def test_sequence_starts_at_zero(self):
+        sw = StreamWriter()
+        event = sw.start()
+        assert event.startswith("id: 0\n")
+
+    def test_sequence_increments(self):
+        sw = StreamWriter()
+        e0 = sw.start()
+        e1 = sw.start_step()
+        e2 = sw.finish()
+        assert e0.startswith("id: 0\n")
+        assert e1.startswith("id: 1\n")
+        assert e2.startswith("id: 2\n")
+
+    def test_each_writer_has_independent_counter(self):
+        sw1 = StreamWriter()
+        sw2 = StreamWriter()
+        sw1.start()
+        sw1.start()
+        e = sw2.start()
+        assert e.startswith("id: 0\n")
+
+    def test_text_convenience_increments_three(self):
+        """text() emits start+delta+end — should consume 3 sequence numbers."""
+        sw = StreamWriter()
+        sw.text("hello")  # uses seq 0, 1, 2
+        e = sw.start_step()  # should be seq 3
+        assert e.startswith("id: 3\n")

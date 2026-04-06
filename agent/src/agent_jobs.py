@@ -10,8 +10,16 @@ Same pattern as batch_progress.py — completed jobs auto-cleaned after 5 min.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass, field
+
+_logger = logging.getLogger(__name__)
+
+# 4 MB per job. At ~100 bytes/event, this allows ~40k events per session.
+# With ~10 concurrent jobs expected, worst-case replay memory is ~40 MB total.
+# Events past this cap are dropped from replay but the live stream is unaffected.
+MAX_EVENT_BYTES = 4 * 1024 * 1024
 
 # Active jobs: job_id -> AgentJob
 _jobs: dict[str, AgentJob] = {}
@@ -34,10 +42,26 @@ class AgentJob:
     created_at: float = field(default_factory=time.time)
     _waiters: list[asyncio.Event] = field(default_factory=list)
     _task: asyncio.Task | None = None
+    _total_bytes: int = 0
 
     def append_event(self, event: str) -> None:
-        """Add an SSE event string and notify all waiting subscribers."""
-        self.events.append(event)
+        """Add an SSE event string and notify all waiting subscribers.
+
+        Uses code-point count (byte-accurate for ASCII SSE content) to track
+        total size. Events that would push the total beyond MAX_EVENT_BYTES are
+        dropped from the replay log but still trigger notification so live
+        readers are not blocked.
+        """
+        event_bytes = len(event)
+        if self._total_bytes + event_bytes <= MAX_EVENT_BYTES:
+            self.events.append(event)
+            self._total_bytes += event_bytes
+        else:
+            _logger.warning(
+                "Job %s event log full (%d bytes), dropping event from replay",
+                self.job_id,
+                self._total_bytes,
+            )
         self._notify()
 
     def _notify(self) -> None:
