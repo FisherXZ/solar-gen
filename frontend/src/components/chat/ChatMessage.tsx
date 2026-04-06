@@ -42,14 +42,6 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
     }
   }
 
-  // Find the last tool group index — text after this is "response", text before is "thinking"
-  const lastToolGroupIndex = (() => {
-    for (let i = partGroups.length - 1; i >= 0; i--) {
-      if (partGroups[i].type === "tool") return i;
-    }
-    return -1; // no tools at all — everything is response
-  })();
-
   // Find the index of the very last text part (for streaming animation)
   const lastTextIndex = (() => {
     for (let i = message.parts.length - 1; i >= 0; i--) {
@@ -135,8 +127,7 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
   // ─── Build timeline stages if in timeline mode ───
   function buildTimelineStages() {
-    // Separate thinking, tool, and response groups
-    const thinkingGroups: Array<{ type: "text"; parts: { text: string; index: number }[] }> = [];
+    // Separate tool and response groups
     const responseGroups: Array<{ type: "text"; parts: { text: string; index: number }[] }> = [];
     const toolSequence: Array<{
       type: "tool";
@@ -207,12 +198,12 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
       }
     }
 
-    return { thinkingGroups, responseGroups, stages };
+    return { responseGroups, stages };
   }
 
   // ─── Assistant message: Timeline mode ───
   if (useTimeline) {
-    const { thinkingGroups, responseGroups, stages } = buildTimelineStages();
+    const { responseGroups, stages } = buildTimelineStages();
 
     const timelineStages = stages.map((stage) => ({
       name: stage.name,
