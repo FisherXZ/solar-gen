@@ -245,6 +245,7 @@ def test_merge_summaries_drops_timeline_from_prior():
     first = _summarize_messages([_user("step one"), _assistant_text("done one")])
     second = _summarize_messages([_user("step two"), _assistant_text("done two")])
     merged = _merge_summaries(first, second)
+    # Timeline should come from new only (not duplicated from prior highlights)
     assert "Key timeline" in merged
     timeline_count = merged.count("Key timeline")
     assert timeline_count == 1
