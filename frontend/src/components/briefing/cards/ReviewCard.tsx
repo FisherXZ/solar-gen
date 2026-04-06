@@ -18,10 +18,10 @@ export function ReviewCard({ event, onDismiss }: ReviewCardProps) {
   async function handleReview(action: "accepted" | "rejected") {
     setSubmitting(true);
     try {
-      const res = await agentFetch(`/api/discoveries/${event.discovery_id}/review`, {
-        method: "POST",
+      const res = await agentFetch(`/api/discover/${event.discovery_id}/review`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: action }),
+        body: JSON.stringify({ action }),
       });
       if (!res.ok) throw new Error("Review failed");
       toast.success(action === "accepted" ? "Discovery approved" : "Discovery rejected");
@@ -69,7 +69,7 @@ export function ReviewCard({ event, onDismiss }: ReviewCardProps) {
 
       <p className="text-sm text-[--text-secondary] mb-4">
         {event.reasoning_summary}
-        {event.source_url && (
+        {event.source_url && /^https?:\/\//i.test(event.source_url) && (
           <>
             {" "}
             <a
