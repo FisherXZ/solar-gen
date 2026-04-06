@@ -9,7 +9,7 @@ The agent chat page shows 6 hardcoded prompt pills ("What's new in ERCOT this we
 Replace the current `SuggestedPrompts` component with a two-column hybrid playbook:
 
 - **Left column ("Right Now")** — dynamic nudges pulled from live stats, showing what needs attention
-- **Right column ("I can help you")** — static outcome-oriented cards describing the 5 main workflows
+- **Right column (no header)** — static outcome-oriented cards describing the 5 main workflows, cards speak for themselves
 - **Header** — just "Solarina" in serif, no subtitle
 
 The agent is named **Solarina**.
@@ -32,8 +32,8 @@ SuggestedPrompts (replaced by)
 └── Playbook
     ├── PlaybookHeader          — "Solarina" in Lora serif
     ├── RightNowColumn          — dynamic nudges from live stats
-    │   └── NudgeCard           — single stat nudge (count + label + page link)
-    └── OutcomeColumn           — static workflow cards
+    │   └── NudgeCard           — single stat nudge (count + label), click pre-fills chat
+    └── OutcomeColumn           — static workflow cards (no column header)
         └── OutcomeCard         — single outcome (title + description)
 ```
 
@@ -58,18 +58,18 @@ The Briefing page already computes `BriefingStats` (new_leads_this_week, awaitin
 
 ### Stats to show
 
-| Nudge | Query | Color | Pre-fill prompt | Page link |
-|-------|-------|-------|-----------------|-----------|
-| Awaiting review | `epc_discoveries` where `review_status = 'pending'`, count | amber | "Let's triage the {n} pending reviews" | → /review |
-| New projects this week | `projects` where `created_at >= 7 days ago`, count | green | "What's new this week? Show me the {n} new projects" | → /briefing |
-| EPCs need contacts | `epc_discoveries` where `review_status = 'accepted'` AND `entity_id IS NOT NULL` AND entity has zero rows in `contacts` table, count | ivory | "Find contacts for the {n} EPCs that need them" | → /actions |
-| Leads ready for CRM | `epc_discoveries` where `review_status = 'accepted'` AND entity has ≥1 contact AND no row in `hubspot_sync_log` for that project, count | ivory | "Let's push the {n} ready leads to HubSpot" | → /actions |
+| Nudge | Query | Color | Pre-fill prompt |
+|-------|-------|-------|-----------------|
+| Awaiting review | `epc_discoveries` where `review_status = 'pending'`, count | amber | "Let's triage the {n} pending reviews" |
+| New projects this week | `projects` where `created_at >= 7 days ago`, count | green | "What's new this week? Show me the {n} new projects" |
+| EPCs need contacts | `epc_discoveries` where `review_status = 'accepted'` AND `entity_id IS NOT NULL` AND entity has zero rows in `contacts` table, count | ivory | "Find contacts for the {n} EPCs that need them" |
+| Leads ready for CRM | `epc_discoveries` where `review_status = 'accepted'` AND entity has ≥1 contact AND no row in `hubspot_sync_log` for that project, count | ivory | "Let's push the {n} ready leads to HubSpot" |
 
 ### Behavior
 
 - **Hide when zero:** If a nudge count is 0, don't render it
-- **All zero state:** If every nudge is 0, show a single centered message: "You're all caught up" with a subtle "Start investigating →" link to the chat input
-- **Click interaction:** Clicking the nudge card pre-fills the chat input with the templated prompt (interpolating the count). The `→ /page` link is a separate small element that navigates directly.
+- **All zero state:** If every nudge is 0, show a single centered message: "You're all caught up" with a default action prompt: "Want to start batch research on unresearched projects?" — clicking it pre-fills the chat.
+- **Click interaction:** Clicking the nudge card pre-fills the chat input with the templated prompt (interpolating the count). One action per card — no secondary navigation links.
 - **Refresh:** Stats are fetched once on mount. No polling. The page reloads stats on navigation back to the agent page.
 
 ### API Endpoint
@@ -90,7 +90,9 @@ This is a server-side Next.js API route that queries Supabase directly (same pat
 
 ---
 
-## Right Column: "I can help you" (Static)
+## Right Column: Outcome Cards (Static, No Header)
+
+The right column has no header label — the cards speak for themselves. This avoids the chatbot-sounding "I can help you" framing and lets the UI feel more like a trusted tool than a service desk.
 
 ### Outcome Cards
 
@@ -100,7 +102,7 @@ This is a server-side Next.js API route that queries Supabase directly (same pat
 | Batch research projects | Run EPC discovery on multiple projects at once | "Batch research unresearched projects" |
 | Triage the review queue | Walk through pending discoveries one by one | "Let's triage pending reviews together" |
 | Pipeline intelligence | Market trends, EPC rankings, regional activity | "Give me a pipeline intelligence briefing" |
-| Export data | Download pipeline, contacts, or discoveries as CSV | "Export my pipeline data as CSV" |
+| Scout a new region | What's active in a specific ISO, who's building there | "Scout MISO for me — what's active and who's building?" |
 
 ### Behavior
 
@@ -115,11 +117,12 @@ This is a server-side Next.js API route that queries Supabase directly (same pat
 Follows `frontend/DESIGN.md` strictly:
 
 - **Header:** "Solarina" — Lora serif, 24px, `text-text-primary`, centered, no subtitle
-- **Column headers:** Geist, 10px, uppercase, `tracking-wider`, `text-text-tertiary` — "RIGHT NOW" and "I CAN HELP YOU"
+- **Left column header:** Geist, 10px, uppercase, `tracking-wider`, `text-text-tertiary` — "RIGHT NOW"
+- **Right column:** No header — cards are self-explanatory
 - **Cards:** `bg-surface-raised`, `border border-border-subtle`, `rounded-lg`, `p-3` (12px 14px)
 - **Stat numbers:** Lora serif, 18px — amber for reviews, green for new projects, ivory for others
 - **Stat labels:** Geist, 12px, `text-text-secondary`
-- **Page links:** Geist, 10px, `text-text-tertiary` — right-aligned, format "→ /page"
+- **Nudge cards:** Single click action only (pre-fill chat), no secondary navigation links
 - **Outcome titles:** Geist, 13px, `font-medium`, `text-text-primary`
 - **Outcome descriptions:** Geist, 11px, `text-text-tertiary`
 - **Layout:** CSS grid, `grid-template-columns: 1fr 1fr`, gap 20px
@@ -158,10 +161,10 @@ Follows `frontend/DESIGN.md` strictly:
 ## Plain English
 
 **What is this?**
-We're replacing the 6 random question buttons on the agent chat page with something that actually helps you. Left side shows what needs attention right now (pulled from real data — how many reviews are pending, how many new projects showed up). Right side shows the 5 main things the agent can do, phrased as goals not questions. Everything flows into the chat when you click it.
+We're replacing the 6 random question buttons on the agent chat page with something that actually helps you. Left side shows what needs attention right now (pulled from real data — how many reviews are pending, how many new projects showed up). Right side shows the 5 core workflows as goal-oriented cards — deep-dive a company, batch research, triage reviews, pipeline intelligence, scout a region. Everything flows into the chat when you click it. One action per card, no split attention.
 
 **Why does it matter?**
-The current playbook barely scratches the surface of what the agent can do (36 tools across research, contacts, CRM, batch operations). Most users would never discover batch research or CSV export from the current prompts. The new design teaches users the full workflow set while also surfacing time-sensitive items.
+The current playbook barely scratches the surface of what the agent can do (36 tools across research, contacts, CRM, batch operations). Most users would never discover batch research or region scouting from the current prompts. The new design teaches users the full workflow set while also surfacing time-sensitive items. When there's nothing urgent, it doesn't leave you at a dead end — it suggests batch research as a default next action.
 
 **What's the agent name?**
 Solarina. Clean, memorable, solar-themed. Shows in serif at the top of the chat page.
