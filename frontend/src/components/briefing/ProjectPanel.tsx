@@ -52,10 +52,10 @@ export function ProjectPanel({ projectId, onClose }: ProjectPanelProps) {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 z-40"
+        className="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200"
         onClick={onClose}
       />
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[--surface-primary] border-l border-[--border-subtle] z-50 overflow-y-auto">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[--surface-primary] border-l border-[--border-subtle] z-50 overflow-y-auto transition-transform duration-200 ease-out">
         <div className="p-6">
           <button
             onClick={onClose}
