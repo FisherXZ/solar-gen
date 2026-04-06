@@ -109,13 +109,19 @@ export function BriefingFeed({ events: initialEvents, stats }: BriefingFeedProps
 
       <div className="space-y-3">
         {sortedActive.length === 0 ? (
-          <div className="text-center py-16">
-            <h3 className="font-serif text-lg text-[--text-primary] mb-2">
+          <div className="text-center py-20">
+            <h3 className="font-serif text-2xl text-[--text-primary] mb-3">
               You&apos;re all caught up
             </h3>
-            <p className="text-sm text-[--text-tertiary]">
+            <p className="text-sm text-[--text-tertiary] mb-6">
               No new events for the selected filters. Try expanding the time range.
             </p>
+            <a
+              href="/agent"
+              className="text-sm text-[--accent-amber] hover:underline"
+            >
+              Start investigating →
+            </a>
           </div>
         ) : (
           sortedActive.map(renderCard)
