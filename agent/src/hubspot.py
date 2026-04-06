@@ -199,8 +199,20 @@ def create_deal(project: dict, company_hs_id: str, token: str, pipeline_id: str 
     return deal_id
 
 
-def create_contact(contact: dict, company_hs_id: str, token: str) -> str:
-    """Create a HubSpot Contact. Returns hubspot_id."""
+def create_contact(contact: dict, company_hs_id: str, token: str, db_client=None) -> str:
+    """Create or find a HubSpot Contact. Returns hubspot_id."""
+    # Check sync_log cache for prior successful sync
+    if db_client and contact.get("id"):
+        existing = db_client.table("hubspot_sync_log").select("hubspot_object_id").eq(
+            "contact_id", contact["id"]
+        ).eq("hubspot_object_type", "contact").eq("sync_status", "success").order(
+            "synced_at", desc=True
+        ).limit(1).execute()
+        if existing.data:
+            hs_id = existing.data[0]["hubspot_object_id"]
+            _associate("contacts", hs_id, "companies", company_hs_id, token)
+            return hs_id
+
     name_parts = (contact.get("full_name") or "Unknown").split(" ", 1)
     first = name_parts[0]
     last = name_parts[1] if len(name_parts) > 1 else ""
@@ -278,7 +290,9 @@ def push_discovery(
         # Check sync_log cache first
         existing_sync = db_client.table("hubspot_sync_log").select("hubspot_object_id").eq(
             "entity_id", entity.get("id")
-        ).eq("hubspot_object_type", "company").eq("sync_status", "success").limit(1).execute()
+        ).eq("hubspot_object_type", "company").eq("sync_status", "success").order(
+            "synced_at", desc=True
+        ).limit(1).execute()
 
         if existing_sync.data:
             company_hs_id = existing_sync.data[0]["hubspot_object_id"]
@@ -319,30 +333,36 @@ def push_discovery(
     try:
         deal_hs_id = create_deal(project, company_hs_id, token, pipeline_id, deal_stage_id)
         result["deal"] = {"status": "created", "hubspot_id": deal_hs_id}
-
-        db_client.table("hubspot_sync_log").insert({
-            "project_id": project.get("id"),
-            "entity_id": entity.get("id"),
-            "hubspot_object_type": "deal",
-            "hubspot_object_id": deal_hs_id,
-            "sync_status": "success",
-            "synced_at": now,
-        }).execute()
     except Exception as e:
         error_msg = str(e)[:500]
         result["errors"].append(f"Deal: {error_msg}")
-        db_client.table("hubspot_sync_log").insert({
-            "project_id": project.get("id"),
-            "hubspot_object_type": "deal",
-            "sync_status": "error",
-            "error_message": error_msg,
-            "synced_at": now,
-        }).execute()
+
+    # Log deal result (best-effort)
+    try:
+        if deal_hs_id:
+            db_client.table("hubspot_sync_log").insert({
+                "project_id": project.get("id"),
+                "entity_id": entity.get("id"),
+                "hubspot_object_type": "deal",
+                "hubspot_object_id": deal_hs_id,
+                "sync_status": "success",
+                "synced_at": now,
+            }).execute()
+        elif result["errors"]:
+            db_client.table("hubspot_sync_log").insert({
+                "project_id": project.get("id"),
+                "hubspot_object_type": "deal",
+                "sync_status": "error",
+                "error_message": result["errors"][-1],
+                "synced_at": now,
+            }).execute()
+    except Exception:
+        pass  # Best-effort logging
 
     # 3. Contacts
     for contact in contacts:
         try:
-            contact_hs_id = create_contact(contact, company_hs_id, token)
+            contact_hs_id = create_contact(contact, company_hs_id, token, db_client=db_client)
             # Associate contact with deal too
             if deal_hs_id:
                 _associate("contacts", contact_hs_id, "deals", deal_hs_id, token)

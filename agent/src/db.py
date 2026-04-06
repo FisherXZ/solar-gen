@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+
+logger = logging.getLogger(__name__)
 
 import anthropic
 from supabase import create_client, Client
@@ -416,14 +419,12 @@ def store_contacts(entity_id: str, contacts: list[dict]) -> list[dict]:
             ).execute()
             if resp.data:
                 stored.append(resp.data[0])
-        except Exception:
-            # Fallback: try insert, ignore if exists
-            try:
-                resp = client.table("contacts").insert(data).execute()
-                if resp.data:
-                    stored.append(resp.data[0])
-            except Exception:
-                pass  # Dedup conflict — contact already exists
+        except Exception as exc:
+            exc_str = str(exc).lower()
+            if "duplicate" in exc_str or "conflict" in exc_str or "unique" in exc_str:
+                logger.debug("Contact already exists: %s", c["full_name"])
+            else:
+                logger.warning("Failed to upsert contact %s: %s", c["full_name"], exc)
     return stored
 
 
@@ -601,8 +602,14 @@ def save_message(
     role: str,
     content: str,
     parts: list | None = None,
+    user_id: str | None = None,
 ) -> dict:
     client = get_client()
+    # Validate ownership if user_id is provided
+    if user_id:
+        conv = client.table("chat_conversations").select("user_id").eq("id", conversation_id).maybe_single().execute()
+        if not conv.data or conv.data.get("user_id") != user_id:
+            raise PermissionError(f"Conversation {conversation_id} does not belong to user {user_id}")
     data = {
         "conversation_id": conversation_id,
         "role": role,

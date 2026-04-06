@@ -54,6 +54,26 @@ export const PATCH = withAdminParams<{ userId: string }>(
       return NextResponse.json({ error: "User role not found" }, { status: 404 });
     }
 
+    // Post-update safety: verify at least one admin remains
+    if (newRole === "member") {
+      const { data: remaining } = await service
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+
+      if (!remaining || remaining.length === 0) {
+        // Revert — restore admin role
+        await service
+          .from("user_roles")
+          .update({ role: "admin", updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        return NextResponse.json(
+          { error: "Cannot demote the last admin" },
+          { status: 409 }
+        );
+      }
+    }
+
     return NextResponse.json({ ok: true, userId, role: newRole });
   }
 );
