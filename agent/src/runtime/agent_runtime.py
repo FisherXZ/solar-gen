@@ -85,8 +85,8 @@ class AgentRuntime:
         while True:
             iteration += 1
 
-            # Call Claude
-            response = await self._call_api(messages)
+            # Call Claude (with streaming events)
+            response = await self._call_api(messages, on_event=on_event)
 
             # Track usage
             if response.usage:
@@ -198,19 +198,60 @@ class AgentRuntime:
             iterations=iteration,
         )
 
-    async def _call_api(self, messages: list[dict]):
-        """Call the Anthropic API. Separated for testability."""
+    async def _call_api(self, messages: list[dict], on_event=None):
+        """Call the Anthropic API with streaming. Emits SSE events via on_event.
+
+        Separated for testability — tests can mock this to return a MockResponse.
+        """
         if self._client is None:
             self._client = anthropic.AsyncAnthropic(api_key=self._api_key)
         client = self._client
 
-        return await client.messages.create(
+        current_tool_input = ""
+
+        async with client.messages.stream(
             model=self.model,
             max_tokens=4096,
             system=self._cached_system,
             tools=self._cached_tools if self._cached_tools else anthropic.NOT_GIVEN,
             messages=messages,
-        )
+        ) as stream:
+            async for event in stream:
+                if on_event is None:
+                    continue
+
+                if event.type == "content_block_start":
+                    if event.content_block.type == "text":
+                        on_event({"type": "text_start"})
+                    elif event.content_block.type == "tool_use":
+                        current_tool_input = ""
+                        on_event({
+                            "type": "tool_input_start",
+                            "tool_name": event.content_block.name,
+                            "tool_id": event.content_block.id,
+                        })
+
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "text_delta":
+                        on_event({"type": "text_delta", "text": event.delta.text})
+                    elif event.delta.type == "input_json_delta":
+                        current_tool_input += event.delta.partial_json
+
+                elif event.type == "content_block_stop":
+                    if current_tool_input:
+                        try:
+                            parsed = json.loads(current_tool_input)
+                        except json.JSONDecodeError:
+                            parsed = {}
+                        on_event({
+                            "type": "tool_input_available",
+                            "input": parsed,
+                        })
+                        current_tool_input = ""
+
+            response = await stream.get_final_message()
+
+        return response
 
     async def _execute_tool(self, name: str, tool_input: dict) -> dict:
         """Dispatch to the tool registry. Separated for testability."""
