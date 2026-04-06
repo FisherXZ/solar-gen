@@ -51,7 +51,7 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
 
   if (event.type === "new_project") {
     return (
-      <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-lg p-4">
+      <div className="bg-[--surface-raised] rounded-lg p-4">
         <div className="flex items-start justify-between">
           <div>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--surface-overlay] text-[--text-tertiary] mb-1">
@@ -88,7 +88,7 @@ export function AlertCard({ event, onExpand, onDismiss }: AlertCardProps) {
   }
 
   return (
-    <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-lg p-4">
+    <div className="bg-[--surface-raised] rounded-lg p-4">
       <div className="flex items-start justify-between">
         <div>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--surface-overlay] text-[--text-tertiary] mb-1">

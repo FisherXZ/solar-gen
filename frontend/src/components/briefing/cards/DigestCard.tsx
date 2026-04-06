@@ -8,7 +8,7 @@ interface DigestCardProps {
 
 export function DigestCard({ event }: DigestCardProps) {
   return (
-    <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-lg p-5">
+    <div className="bg-[--surface-overlay] rounded-lg p-5">
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-[--surface-overlay] text-[--text-tertiary] mb-3">
         Weekly Digest
       </span>

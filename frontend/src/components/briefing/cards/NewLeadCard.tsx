@@ -40,7 +40,7 @@ export function NewLeadCard({ event, onExpand, onDismiss }: NewLeadCardProps) {
   }
 
   return (
-    <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-lg p-5">
+    <div className="bg-[--surface-raised] border border-[--border-subtle] border-l-2 border-l-[--accent-amber] rounded-lg p-5">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
