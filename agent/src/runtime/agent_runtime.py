@@ -87,7 +87,12 @@ class AgentRuntime:
         messages = await self.compactor.maybe_compact(messages)
 
         tool_history: list[str] = []
-        total_usage = {"input_tokens": 0, "output_tokens": 0}
+        total_usage = {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+        }
         iteration = 0
 
         while True:
@@ -98,8 +103,11 @@ class AgentRuntime:
 
             # Track usage
             if response.usage:
-                total_usage["input_tokens"] += getattr(response.usage, "input_tokens", 0)
-                total_usage["output_tokens"] += getattr(response.usage, "output_tokens", 0)
+                u = response.usage
+                total_usage["input_tokens"]       += getattr(u, "input_tokens", 0)
+                total_usage["output_tokens"]      += getattr(u, "output_tokens", 0)
+                total_usage["cache_read_tokens"]  += getattr(u, "cache_read_input_tokens", 0)
+                total_usage["cache_write_tokens"] += getattr(u, "cache_creation_input_tokens", 0)
 
             # If no tool calls, we're done
             if response.stop_reason == "end_turn":
