@@ -32,8 +32,10 @@ class BatchTrackingHook(Hook):
         return HookAction.continue_with(modified)
 
     async def post_tool(self, tool_name: str, tool_input: dict, result: dict, context: RunContext) -> dict:
-        if tool_name == "batch_research_epc" and self._active_batch_id:
+        # Read batch_id from tool_input (set in pre_tool) rather than instance state
+        batch_id = tool_input.get("_batch_id") or self._active_batch_id
+        if tool_name == "batch_research_epc" and batch_id:
             from ..batch_progress import mark_done
-            mark_done(self._active_batch_id)
+            mark_done(batch_id)
             self._active_batch_id = None
         return result
