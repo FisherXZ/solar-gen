@@ -17,14 +17,17 @@ export const PATCH = withAdminParams<{ userId: string }>(
 
     const service = createServiceClient();
 
-    // Prevent demoting yourself if you're the last admin
-    if (newRole === "member" && userId === adminUser.id) {
+    // Prevent demoting any admin if it would leave zero admins
+    if (newRole === "member") {
       const { data: admins } = await service
         .from("user_roles")
         .select("user_id")
         .eq("role", "admin");
 
-      if ((admins || []).length <= 1) {
+      const isCurrentlyAdmin = (admins || []).some(
+        (a: { user_id: string }) => a.user_id === userId
+      );
+      if (isCurrentlyAdmin && (admins || []).length <= 1) {
         return NextResponse.json(
           { error: "Cannot demote the last admin" },
           { status: 400 }
@@ -32,13 +35,38 @@ export const PATCH = withAdminParams<{ userId: string }>(
       }
     }
 
-    const { error } = await service
+    const { data, error } = await service
       .from("user_roles")
       .update({ role: newRole, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: "User role not found" }, { status: 404 });
+    }
+
+    // Post-update safety: verify at least one admin remains
+    if (newRole === "member") {
+      const { data: remaining } = await service
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+
+      if (!remaining || remaining.length === 0) {
+        // Revert — restore admin role
+        await service
+          .from("user_roles")
+          .update({ role: "admin", updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        return NextResponse.json(
+          { error: "Cannot demote the last admin" },
+          { status: 409 }
+        );
+      }
     }
 
     return NextResponse.json({ ok: true, userId, role: newRole });
@@ -72,14 +100,20 @@ export const DELETE = withAdminParams<{ userId: string }>(
 
     // Remove from allowlist
     if (targetUser.email) {
-      await service
+      const { error: allowlistError } = await service
         .from("allowed_emails")
         .delete()
         .eq("email", targetUser.email.toLowerCase());
+      if (allowlistError) {
+        return NextResponse.json({ error: `Failed to remove from allowlist: ${allowlistError.message}` }, { status: 500 });
+      }
     }
 
     // Remove role row (will cascade on user delete, but be explicit)
-    await service.from("user_roles").delete().eq("user_id", userId);
+    const { error: roleError } = await service.from("user_roles").delete().eq("user_id", userId);
+    if (roleError) {
+      return NextResponse.json({ error: `Failed to remove role: ${roleError.message}` }, { status: 500 });
+    }
 
     // Delete auth user
     const { error } = await service.auth.admin.deleteUser(userId);
