@@ -42,6 +42,7 @@ from . import (
     request_discovery_review,
     request_guidance,
     research_scratchpad,
+    run_contact_discovery,
     save_contact,
     scrape_epc_website,
     search_enr,
@@ -105,6 +106,8 @@ _register(enrich_contact_phone)
 _register(classify_contact)
 # Contact persistence
 _register(save_contact)
+# Sub-agent launcher tools
+_register(run_contact_discovery)
 # Agent self-management tools
 _register(manage_todo)
 _register(think)
