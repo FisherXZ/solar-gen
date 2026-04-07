@@ -658,10 +658,6 @@ function ProjectRow({
     if (isExpanded) onToggleExpand();
   }
 
-  // Determine the subtle research button text/state
-  const isActive =
-    researchStatus !== "idle" && researchStatus !== "done";
-
   return (
     <>
       {/* Main data row — clicks navigate to detail page */}

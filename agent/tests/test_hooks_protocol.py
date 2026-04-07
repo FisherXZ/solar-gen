@@ -1,6 +1,7 @@
 """Tests for Hook protocol and runners."""
 
 import pytest
+
 from src.runtime.hooks import Hook, run_post_hooks, run_pre_hooks
 from src.runtime.types import HookAction, RunContext
 

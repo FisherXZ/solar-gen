@@ -21,6 +21,7 @@ export default function SettingsPage() {
 
   // Show masked key on load
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (apiKey) setInputValue(apiKey);
   }, [apiKey]);
 

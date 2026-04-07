@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
-from src.agent_jobs import AgentJob, MAX_EVENT_BYTES
+from src.agent_jobs import MAX_EVENT_BYTES, AgentJob
 
 
 class TestHeartbeats:

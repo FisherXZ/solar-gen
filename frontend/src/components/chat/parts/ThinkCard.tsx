@@ -10,7 +10,7 @@ interface ThinkCardProps {
   };
 }
 
-export default function ThinkCard({ data, input }: ThinkCardProps) {
+export default function ThinkCard({ input }: ThinkCardProps) {
   // The thought text is in the input (what the agent sent), not the output
   // (which just returns {recorded: true} to save tokens)
   const thought = input?.thought;

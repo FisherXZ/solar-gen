@@ -50,6 +50,7 @@ export default function FileAttachment({
     // Compact display for message history
     if (isImage && file.preview) {
       return (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={file.preview}
           alt={file.name}
@@ -71,6 +72,7 @@ export default function FileAttachment({
       {/* Thumbnail or icon */}
       <div className="h-8 w-8 shrink-0 overflow-hidden rounded">
         {isImage && file.preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={file.preview}
             alt={file.name}

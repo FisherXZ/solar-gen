@@ -36,6 +36,7 @@ export default function StatsCards({ projects, discoveries, lastRuns }: StatsCar
   }
 
   function freshnessDot(date: Date): string {
+    // eslint-disable-next-line react-hooks/purity
     const days = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
     if (days <= 7) return "bg-status-green";
     if (days <= 14) return "bg-status-amber";

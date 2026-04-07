@@ -62,7 +62,7 @@ function StatusDot({ status }: { status: TodoTask["status"] }) {
   );
 }
 
-export default function TodoPlanCard({ data, operation }: TodoPlanCardProps) {
+export default function TodoPlanCard({ data }: TodoPlanCardProps) {
   if (data.error) {
     return (
       <div className="px-3 py-2 text-sm text-status-red">{data.error}</div>

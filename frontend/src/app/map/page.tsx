@@ -13,7 +13,7 @@ export default async function MapPage() {
     .order("lead_score", { ascending: false })
     .limit(10000);
 
-  const { data: discoveries, error: discoveriesError } = await supabase
+  const { data: discoveries } = await supabase
     .from("epc_discoveries")
     .select("*")
     .order("created_at", { ascending: false });

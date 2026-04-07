@@ -22,7 +22,7 @@ export default function NeedsInvestigationPanel({
   projects: initialProjects,
   totalUnresearched,
 }: NeedsInvestigationPanelProps) {
-  const [projects, setProjects] =
+  const [projects] =
     useState<UnresearchedProject[]>(initialProjects);
   const [researchingId, setResearchingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

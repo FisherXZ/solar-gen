@@ -28,6 +28,7 @@ export function useFrozenDetector(
       // Clear timer and frozen state when loading stops
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsFrozen(false);
       fingerprintRef.current = "";
     } else if (fingerprint !== fingerprintRef.current) {

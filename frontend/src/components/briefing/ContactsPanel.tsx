@@ -30,9 +30,9 @@ export default function ContactsPanel({
   needContacts: initialNeedContacts,
   crmReady: initialCrmReady,
 }: ContactsPanelProps) {
-  const [needContacts, setNeedContacts] =
+  const [needContacts] =
     useState<NeedContactsItem[]>(initialNeedContacts);
-  const [crmReady, setCrmReady] = useState<CrmReadyItem[]>(initialCrmReady);
+  const [crmReady] = useState<CrmReadyItem[]>(initialCrmReady);
   const [findingId, setFindingId] = useState<string | null>(null);
   const [pushingId, setPushingId] = useState<string | null>(null);
   const [syncedIds, setSyncedIds] = useState<Set<string>>(new Set());

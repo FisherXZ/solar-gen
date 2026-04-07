@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // frontend/src/app/briefing/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import BriefingDashboard from "@/components/briefing/BriefingDashboard";

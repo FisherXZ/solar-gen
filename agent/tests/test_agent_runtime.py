@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from src.runtime.agent_runtime import AgentRuntime
 from src.runtime.compactor import Compactor
 from src.runtime.escalation import EscalationPolicy
@@ -299,8 +300,7 @@ async def test_call_api_tool_block_emits_input_start_and_available():
     )
 
     types = [e["type"] for e in emitted]
-    assert "tool_input_start" in types, f"Expected tool_input_start, got: {types}"
-    assert "tool_input_available" in types, f"Expected tool_input_available, got: {types}"
+    assert types == ["tool_input_start", "tool_input_available"], f"Got: {types}"
 
     available = next(e for e in emitted if e["type"] == "tool_input_available")
     assert available["input"] == {"query": "test"}, (
@@ -346,3 +346,15 @@ async def test_call_api_malformed_tool_json_falls_back_to_empty():
     assert available["input"] == {}, (
         f"Expected empty dict fallback for malformed JSON, got: {available['input']}"
     )
+
+
+@pytest.mark.asyncio
+async def test_call_api_content_block_stop_without_open_block_is_noop():
+    """content_block_stop with no open text or tool block emits nothing and doesn't crash."""
+    rt = _make_rt()
+    events = [_mk_stream_event("content_block_stop")]
+    rt._client = MagicMock()
+    rt._client.messages.stream.return_value = _fake_stream(events)
+    emitted = []
+    await rt._call_api([{"role": "user", "content": "hi"}], on_event=lambda e: emitted.append(e))
+    assert emitted == []

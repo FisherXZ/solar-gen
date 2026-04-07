@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // frontend/src/components/briefing/BriefingDashboard.test.tsx
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";

@@ -1,6 +1,7 @@
 """Tests for InjectContextHook."""
 
 import pytest
+
 from src.hooks.inject_context import InjectContextHook
 from src.runtime import RunContext
 

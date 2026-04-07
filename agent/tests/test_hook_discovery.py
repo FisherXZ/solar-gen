@@ -2,6 +2,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from src.runtime import RunContext
 
 # Stub out db module before importing hook

@@ -30,6 +30,7 @@ export default function MarkdownMessage({
   const citationCounterRef = useRef(0);
 
   // Reset counter on each render (citations re-number per message render)
+  // eslint-disable-next-line react-hooks/refs
   citationCounterRef.current = 0;
 
   const components = {

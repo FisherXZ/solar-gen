@@ -117,6 +117,7 @@ export default function Sidebar() {
           <div className={`border-t border-border-subtle px-3 py-3 ${collapsed ? "lg:px-2" : ""}`}>
             <div className={`flex items-center gap-2 ${collapsed ? "lg:justify-center" : ""}`}>
               {user.user_metadata?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.user_metadata.avatar_url}
                   alt=""
