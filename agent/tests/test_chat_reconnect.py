@@ -1,4 +1,5 @@
 """Tests for Last-Event-ID reconnect in /api/chat."""
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -13,6 +14,7 @@ from src.main import app
 @pytest.fixture
 def client():
     from src.main import require_auth
+
     app.dependency_overrides[require_auth] = lambda: "test-user"
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -31,8 +33,7 @@ def test_last_event_id_reconnects_to_existing_job(client):
     with patch("src.main.get_active_job_for_conversation", return_value=job):
         response = client.post(
             "/api/chat",
-            json={"messages": [{"role": "user", "content": "hi"}],
-                  "conversation_id": "conv-abc"},
+            json={"messages": [{"role": "user", "content": "hi"}], "conversation_id": "conv-abc"},
             headers={"last-event-id": "0"},  # client saw event 0, wants 1+
         )
 
@@ -50,18 +51,19 @@ def test_last_event_id_falls_through_when_no_job(client):
     # Patch get_active_job_for_conversation to return None (job expired)
     # The request should NOT raise an error — it falls through to the new-agent path
     # We can verify this by checking we don't get a 404/500 from the reconnect block itself
-    with patch("src.main.get_active_job_for_conversation", return_value=None), \
-         patch("src.main.db.save_message"), \
-         patch("src.main.create_job") as mock_create_job, \
-         patch("src.main.asyncio.create_task"), \
-         patch("src.main.set_task"):
+    with (
+        patch("src.main.get_active_job_for_conversation", return_value=None),
+        patch("src.main.db.save_message"),
+        patch("src.main.create_job") as mock_create_job,
+        patch("src.main.asyncio.create_task"),
+        patch("src.main.set_task"),
+    ):
         mock_job = AgentJob(job_id="new-job", conversation_id="conv-abc")
         mock_job.done = True
         mock_create_job.return_value = mock_job
         response = client.post(
             "/api/chat",
-            json={"messages": [{"role": "user", "content": "hi"}],
-                  "conversation_id": "conv-abc"},
+            json={"messages": [{"role": "user", "content": "hi"}], "conversation_id": "conv-abc"},
             headers={"last-event-id": "5"},
         )
     # Should not be 404 or 500 from the reconnect block — it fell through
@@ -80,8 +82,7 @@ def test_invalid_last_event_id_defaults_to_cursor_zero(client):
     with patch("src.main.get_active_job_for_conversation", return_value=job):
         response = client.post(
             "/api/chat",
-            json={"messages": [{"role": "user", "content": "hi"}],
-                  "conversation_id": "conv-def"},
+            json={"messages": [{"role": "user", "content": "hi"}], "conversation_id": "conv-def"},
             headers={"last-event-id": "not-a-number"},
         )
 

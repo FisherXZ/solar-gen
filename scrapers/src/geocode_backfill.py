@@ -7,7 +7,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
 
 from .db import get_client
 from .geocoder import geocode_county

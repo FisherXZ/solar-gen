@@ -3,6 +3,7 @@
 Replaces messages older than the preserve_recent window with a single synthetic
 summary message built from pure string extraction. No API calls, no failure modes.
 """
+
 from __future__ import annotations
 
 import json
@@ -166,7 +167,7 @@ def _detect_existing_summary(message: dict) -> str | None:
     content = message.get("content", "")
     if not isinstance(content, str) or not content.startswith(CONTINUATION_PREAMBLE):
         return None
-    summary = content[len(CONTINUATION_PREAMBLE):]
+    summary = content[len(CONTINUATION_PREAMBLE) :]
     split_note = f"\n\n{RECENT_MESSAGES_NOTE}"
     if split_note in summary:
         summary = summary.split(split_note)[0]
@@ -192,7 +193,7 @@ def _summarize_messages(messages: list[dict]) -> str:
     assistant_count = 0
     tool_names: set[str] = set()
     all_text_parts: list[str] = []
-    user_texts: list[str] = []    # all non-summary user messages
+    user_texts: list[str] = []  # all non-summary user messages
     keyword_texts: list[str] = []  # all messages matching pending-work keywords
     current_work: str | None = None
     timeline: list[str] = []
@@ -330,9 +331,7 @@ def _build_continuation_message(summary: str) -> dict:
     """Wrap a summary in a user message for injection as the new conversation head."""
     formatted = _format_summary(summary)
     content = (
-        f"{CONTINUATION_PREAMBLE}{formatted}"
-        f"\n\n{RECENT_MESSAGES_NOTE}"
-        f"\n{DIRECT_RESUME_INSTRUCTION}"
+        f"{CONTINUATION_PREAMBLE}{formatted}\n\n{RECENT_MESSAGES_NOTE}\n{DIRECT_RESUME_INSTRUCTION}"
     )
     return {"role": "user", "content": content}
 

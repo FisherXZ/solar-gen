@@ -1,4 +1,5 @@
 """Tests for AgentJob heartbeats and memory cap."""
+
 from __future__ import annotations
 
 import asyncio
@@ -18,6 +19,7 @@ class TestHeartbeats:
         job.done = False
 
         events = []
+
         async def collect():
             async for chunk in _stream_from_job(job, cursor=0, ping_interval=0.05):
                 events.append(chunk)
@@ -33,8 +35,9 @@ class TestHeartbeats:
         from src.main import _stream_from_job
 
         job = AgentJob(job_id="j2", conversation_id="c2")
-        job.events = [f"id: {i}\ndata: {{\"type\": \"text-delta\", \"delta\": \"x\"}}\n\n"
-                      for i in range(5)]
+        job.events = [
+            f'id: {i}\ndata: {{"type": "text-delta", "delta": "x"}}\n\n' for i in range(5)
+        ]
         job.done = True
 
         events = []
@@ -56,8 +59,8 @@ class TestMemoryCap:
         job = AgentJob(job_id="j4", conversation_id="c4")
         big_event = "x" * (MAX_EVENT_BYTES + 1)
         job.append_event("id: 0\ndata: {}\n\n")  # first event fits
-        job.append_event(big_event)              # this one exceeds cap
-        assert len(job.events) == 1              # only the first was stored
+        job.append_event(big_event)  # this one exceeds cap
+        assert len(job.events) == 1  # only the first was stored
 
     def test_notify_still_called_when_dropped(self):
         """Even when event is dropped from log, waiters are still notified."""

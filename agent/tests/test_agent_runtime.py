@@ -192,8 +192,10 @@ def _fake_stream(events, stop_reason="end_turn"):
     final.stop_reason = stop_reason
     final.content = []
     final.usage = MagicMock(
-        input_tokens=10, output_tokens=5,
-        cache_read_input_tokens=0, cache_creation_input_tokens=0,
+        input_tokens=10,
+        output_tokens=5,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
     )
 
     class FakeStream:
@@ -222,7 +224,9 @@ def _fake_stream(events, stop_reason="end_turn"):
 
 def _make_rt():
     return AgentRuntime(
-        system_prompt="test", tools=[], hooks=[],
+        system_prompt="test",
+        tools=[],
+        hooks=[],
         compactor=Compactor(max_tokens=100_000),
         escalation=EscalationPolicy(max_iterations=50),
         api_key="k",
@@ -339,9 +343,7 @@ async def test_call_api_malformed_tool_json_falls_back_to_empty():
         on_event=lambda e: emitted.append(e),
     )
 
-    available = next(
-        (e for e in emitted if e["type"] == "tool_input_available"), None
-    )
+    available = next((e for e in emitted if e["type"] == "tool_input_available"), None)
     assert available is not None, "Expected tool_input_available to be emitted"
     assert available["input"] == {}, (
         f"Expected empty dict fallback for malformed JSON, got: {available['input']}"

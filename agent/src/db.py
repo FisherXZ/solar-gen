@@ -124,12 +124,7 @@ def store_discovery(
     epc_name = result.epc_contractor or "Unknown"
     if epc_name and epc_name != "Unknown":
         entity_resp = (
-            get_client()
-            .table("entities")
-            .select("id")
-            .ilike("name", epc_name)
-            .limit(1)
-            .execute()
+            get_client().table("entities").select("id").ilike("name", epc_name).limit(1).execute()
         )
         if entity_resp.data:
             entity_id = entity_resp.data[0]["id"]

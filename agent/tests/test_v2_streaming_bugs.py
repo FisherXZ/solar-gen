@@ -74,6 +74,7 @@ async def test_A_text_after_tool_round_uses_text_events_not_thinking():
         on_event({"type": "text_delta", "text": "Here are my top 3 picks:"})
         on_event({"type": "text_end"})
         from src.runtime.types import TurnResult
+
         return TurnResult(messages=messages, usage={}, iterations=2)
 
     mock_runtime = MagicMock()
@@ -197,6 +198,5 @@ async def test_B_call_api_emits_text_end():
     assert "text_start" in types, f"Expected text_start, got: {types}"
     assert "text_delta" in types, f"Expected text_delta, got: {types}"
     assert "text_end" in types, (
-        f"text_end was never emitted — Vercel AI SDK cannot finalize the text part. "
-        f"Got: {types}"
+        f"text_end was never emitted — Vercel AI SDK cannot finalize the text part. Got: {types}"
     )

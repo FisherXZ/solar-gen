@@ -76,7 +76,7 @@ def _load_centroids() -> dict[tuple[str, str], tuple[float, float]]:
 
     with open(_DATA_FILE, "r") as f:
         reader = csv.reader(f, delimiter="\t")
-        header = next(reader)  # Skip header
+        next(reader)  # Skip header
         for row in reader:
             if len(row) < 10:
                 continue

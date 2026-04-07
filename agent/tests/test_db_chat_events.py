@@ -1,4 +1,5 @@
 """Tests for log_chat_event() and updated save_message() token params."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -19,12 +20,14 @@ class TestLogChatEvent:
         db.log_chat_event("conv-abc", 2, "tool_called", {"tool_name": "web_search"})
 
         mock_get_client.return_value.table.assert_called_once_with("chat_events")
-        mock_table.insert.assert_called_once_with({
-            "conversation_id": "conv-abc",
-            "turn_number": 2,
-            "event_type": "tool_called",
-            "data": {"tool_name": "web_search"},
-        })
+        mock_table.insert.assert_called_once_with(
+            {
+                "conversation_id": "conv-abc",
+                "turn_number": 2,
+                "event_type": "tool_called",
+                "data": {"tool_name": "web_search"},
+            }
+        )
         mock_table.insert.return_value.execute.assert_called_once()
 
     @patch("src.db.get_client")
@@ -41,12 +44,14 @@ class TestLogChatEvent:
 
         db.log_chat_event("conv-abc", 0, "agent_finished", {})
 
-        mock_table.insert.assert_called_once_with({
-            "conversation_id": "conv-abc",
-            "turn_number": 0,
-            "event_type": "agent_finished",
-            "data": {},
-        })
+        mock_table.insert.assert_called_once_with(
+            {
+                "conversation_id": "conv-abc",
+                "turn_number": 0,
+                "event_type": "agent_finished",
+                "data": {},
+            }
+        )
 
 
 # ---------------------------------------------------------------------------

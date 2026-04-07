@@ -10,6 +10,7 @@ Covers:
   - all_parts persistence (tool-invocation + text)
   - CancelledError → clean finish events emitted
 """
+
 from __future__ import annotations
 
 import json
@@ -55,6 +56,7 @@ def _make_runtime_mock(event_sequence: list[dict], messages_passthrough=None):
         for evt in event_sequence:
             on_event(evt)
         from src.runtime.types import TurnResult
+
         return TurnResult(
             messages=messages_passthrough or messages,
             usage={},
@@ -91,11 +93,13 @@ async def _run(event_sequence: list[dict], conversation_id: str = "conv-1") -> M
 @pytest.mark.asyncio
 async def test_sse_lifecycle_bookends():
     """Every response starts with start + start-step and ends with finish-step + finish + DONE."""
-    job = await _run([
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Hello"},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Hello"},
+            {"type": "text_end"},
+        ]
+    )
     types = _types(job.events)
     assert types[0] == "start"
     assert types[1] == "start-step"
@@ -112,11 +116,13 @@ async def test_sse_lifecycle_bookends():
 @pytest.mark.asyncio
 async def test_text_only_emits_text_start_delta_end():
     """Text-only response streams text-start, text-delta, text-end."""
-    job = await _run([
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Hi there"},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Hi there"},
+            {"type": "text_end"},
+        ]
+    )
     types = _types(job.events)
     assert "text-start" in types
     assert "text-delta" in types
@@ -128,11 +134,13 @@ async def test_text_only_emits_text_start_delta_end():
 @pytest.mark.asyncio
 async def test_text_delta_content_preserved():
     """text-delta event contains the correct text."""
-    job = await _run([
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Pick: Alpha Solar"},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Pick: Alpha Solar"},
+            {"type": "text_end"},
+        ]
+    )
     parsed = _parse_events(job.events)
     deltas = [e for e in parsed if e["type"] == "text-delta"]
     assert len(deltas) == 1
@@ -147,14 +155,21 @@ async def test_text_delta_content_preserved():
 @pytest.mark.asyncio
 async def test_text_after_tool_round_uses_text_events_not_thinking():
     """After a tool call, the final response must use text-* not thinking-* events."""
-    job = await _run([
-        {"type": "tool_input_start", "tool_name": "think", "tool_id": "tc-1"},
-        {"type": "tool_result", "tool_name": "think", "tool_id": "tc-1",
-         "input": {"thought": "reasoning..."}, "result": {"recorded": True}},
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "My top 3 picks are:"},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "tool_input_start", "tool_name": "think", "tool_id": "tc-1"},
+            {
+                "type": "tool_result",
+                "tool_name": "think",
+                "tool_id": "tc-1",
+                "input": {"thought": "reasoning..."},
+                "result": {"recorded": True},
+            },
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "My top 3 picks are:"},
+            {"type": "text_end"},
+        ]
+    )
     types = _types(job.events)
     assert "text-start" in types, f"Expected text-start, got: {types}"
     assert "text-delta" in types
@@ -166,14 +181,21 @@ async def test_text_after_tool_round_uses_text_events_not_thinking():
 @pytest.mark.asyncio
 async def test_tool_input_start_emits_sse_event():
     """tool_input_start fires tool-input-start SSE event."""
-    job = await _run([
-        {"type": "tool_input_start", "tool_name": "search_projects", "tool_id": "tc-2"},
-        {"type": "tool_result", "tool_name": "search_projects", "tool_id": "tc-2",
-         "input": {"state": "TX"}, "result": {"count": 5, "projects": []}},
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Done."},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "tool_input_start", "tool_name": "search_projects", "tool_id": "tc-2"},
+            {
+                "type": "tool_result",
+                "tool_name": "search_projects",
+                "tool_id": "tc-2",
+                "input": {"state": "TX"},
+                "result": {"count": 5, "projects": []},
+            },
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Done."},
+            {"type": "text_end"},
+        ]
+    )
     types = _types(job.events)
     assert "tool-input-start" in types
 
@@ -181,14 +203,21 @@ async def test_tool_input_start_emits_sse_event():
 @pytest.mark.asyncio
 async def test_tool_result_emits_tool_output_available():
     """tool_result fires tool-output-available SSE event with the result payload."""
-    job = await _run([
-        {"type": "tool_input_start", "tool_name": "think", "tool_id": "tc-3"},
-        {"type": "tool_result", "tool_name": "think", "tool_id": "tc-3",
-         "input": {}, "result": {"recorded": True}},
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "OK."},
-        {"type": "text_end"},
-    ])
+    job = await _run(
+        [
+            {"type": "tool_input_start", "tool_name": "think", "tool_id": "tc-3"},
+            {
+                "type": "tool_result",
+                "tool_name": "think",
+                "tool_id": "tc-3",
+                "input": {},
+                "result": {"recorded": True},
+            },
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "OK."},
+            {"type": "text_end"},
+        ]
+    )
     parsed = _parse_events(job.events)
     output_events = [e for e in parsed if e["type"] == "tool-output-available"]
     assert len(output_events) == 1
@@ -203,9 +232,11 @@ async def test_tool_result_emits_tool_output_available():
 @pytest.mark.asyncio
 async def test_escalation_emits_proper_text_part():
     """Escalation suggestion is wrapped in text-start + text-delta + text-end."""
-    job = await _run([
-        {"type": "escalation", "suggestion": "I've hit my limit — please refine your query."},
-    ])
+    job = await _run(
+        [
+            {"type": "escalation", "suggestion": "I've hit my limit — please refine your query."},
+        ]
+    )
     types = _types(job.events)
     assert "text-start" in types
     assert "text-delta" in types
@@ -218,9 +249,11 @@ async def test_escalation_emits_proper_text_part():
 @pytest.mark.asyncio
 async def test_escalation_with_no_suggestion_emits_nothing():
     """Escalation event with empty suggestion does not emit any SSE text events."""
-    job = await _run([
-        {"type": "escalation", "suggestion": ""},
-    ])
+    job = await _run(
+        [
+            {"type": "escalation", "suggestion": ""},
+        ]
+    )
     types = _types(job.events)
     assert "text-start" not in types
     assert "text-delta" not in types
@@ -235,11 +268,13 @@ async def test_escalation_with_no_suggestion_emits_nothing():
 async def test_save_message_called_with_correct_args():
     """db.save_message receives correct conversation_id, role, and content."""
     job = MockJob()
-    mock_runtime = _make_runtime_mock([
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Here is your answer."},
-        {"type": "text_end"},
-    ])
+    mock_runtime = _make_runtime_mock(
+        [
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Here is your answer."},
+            {"type": "text_end"},
+        ]
+    )
     mock_db = MagicMock()
     with (
         patch("src.main.build_chat_runtime", return_value=mock_runtime),
@@ -264,14 +299,21 @@ async def test_save_message_called_with_correct_args():
 async def test_all_parts_includes_tool_invocation_and_text():
     """all_parts passed to save_message contains tool-invocation and text entries."""
     job = MockJob()
-    mock_runtime = _make_runtime_mock([
-        {"type": "tool_input_start", "tool_name": "search_projects", "tool_id": "tc-p"},
-        {"type": "tool_result", "tool_name": "search_projects", "tool_id": "tc-p",
-         "input": {"state": "CA"}, "result": {"count": 2, "projects": []}},
-        {"type": "text_start"},
-        {"type": "text_delta", "text": "Found 2 projects."},
-        {"type": "text_end"},
-    ])
+    mock_runtime = _make_runtime_mock(
+        [
+            {"type": "tool_input_start", "tool_name": "search_projects", "tool_id": "tc-p"},
+            {
+                "type": "tool_result",
+                "tool_name": "search_projects",
+                "tool_id": "tc-p",
+                "input": {"state": "CA"},
+                "result": {"count": 2, "projects": []},
+            },
+            {"type": "text_start"},
+            {"type": "text_delta", "text": "Found 2 projects."},
+            {"type": "text_end"},
+        ]
+    )
     mock_db = MagicMock()
     with (
         patch("src.main.build_chat_runtime", return_value=mock_runtime),

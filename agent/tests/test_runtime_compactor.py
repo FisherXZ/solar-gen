@@ -1,4 +1,5 @@
 """Tests for HeuristicCompactor and its private helpers."""
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ from runtime.compactor import (
 # _truncate
 # ---------------------------------------------------------------------------
 
+
 def test_truncate_short_string_unchanged():
     assert _truncate("hello", 10) == "hello"
 
@@ -42,6 +44,7 @@ def test_truncate_long_string_adds_ellipsis():
 # _estimate_tokens
 # ---------------------------------------------------------------------------
 
+
 def test_estimate_tokens_empty():
     assert _estimate_tokens([]) == 0
 
@@ -56,6 +59,7 @@ def test_estimate_tokens_rough_quarter():
 # ---------------------------------------------------------------------------
 # _extract_file_candidates
 # ---------------------------------------------------------------------------
+
 
 def test_extract_file_candidates_python_and_sql():
     text = "Updated agent/src/runtime/compactor.py and migrations/005_init.sql today."
@@ -90,6 +94,7 @@ def test_extract_file_candidates_capped_at_eight():
 # _extract_first_text
 # ---------------------------------------------------------------------------
 
+
 def test_extract_first_text_string_content():
     msg = {"role": "user", "content": "hello world"}
     assert _extract_first_text(msg) == "hello world"
@@ -114,6 +119,7 @@ def test_extract_first_text_empty_returns_none():
 # ---------------------------------------------------------------------------
 # _detect_existing_summary
 # ---------------------------------------------------------------------------
+
 
 def _make_continuation_msg(summary: str) -> dict:
     return _build_continuation_message(summary)
@@ -141,6 +147,7 @@ def test_detect_existing_summary_roundtrip():
 # ---------------------------------------------------------------------------
 # _summarize_messages
 # ---------------------------------------------------------------------------
+
 
 def _user(text: str) -> dict:
     return {"role": "user", "content": text}
@@ -231,6 +238,7 @@ def test_summarize_messages_wrapped_in_xml():
 # _merge_summaries
 # ---------------------------------------------------------------------------
 
+
 def test_merge_summaries_contains_both_sections():
     first = _summarize_messages([_user("first request"), _assistant_text("first response")])
     second = _summarize_messages([_user("second request"), _assistant_text("second response")])
@@ -253,6 +261,7 @@ def test_merge_summaries_drops_timeline_from_prior():
 # _format_summary
 # ---------------------------------------------------------------------------
 
+
 def test_format_summary_strips_xml_tags():
     result = _format_summary("<summary>\nConversation summary:\n- Scope: 2.\n</summary>")
     assert "<summary>" not in result
@@ -270,6 +279,7 @@ def test_format_summary_passthrough_if_no_tags():
 # _build_continuation_message
 # ---------------------------------------------------------------------------
 
+
 def test_build_continuation_message_structure():
     msg = _build_continuation_message("<summary>test summary</summary>")
     assert msg["role"] == "user"
@@ -282,6 +292,7 @@ def test_build_continuation_message_structure():
 # ---------------------------------------------------------------------------
 # HeuristicCompactor — end-to-end
 # ---------------------------------------------------------------------------
+
 
 def _make_messages(n: int) -> list[dict]:
     """Make n alternating user/assistant messages with enough content to exceed threshold."""
