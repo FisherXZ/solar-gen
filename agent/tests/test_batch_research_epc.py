@@ -125,7 +125,7 @@ class TestExecute:
         async def capture_progress(update):
             progress_events.append(update)
 
-        async def fake_run_batch(projects, on_progress, concurrency=5):
+        async def fake_run_batch(projects, on_progress, concurrency=5, cancel_event=None, api_key=None):
             await on_progress({"project_id": "p1", "status": "started", "project_name": "Solar"})
             await on_progress(
                 {"project_id": "p1", "status": "completed", "discovery": _fake_discovery("p1")}
