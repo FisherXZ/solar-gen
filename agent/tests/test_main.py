@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.main import app
+from src.main import app, require_auth
 from src.models import AgentResult
 
 # ---------------------------------------------------------------------------
@@ -47,9 +47,11 @@ def sample_discovery():
 
 @pytest.fixture()
 async def client():
+    app.dependency_overrides[require_auth] = lambda: "test-user-id"
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------

@@ -354,6 +354,7 @@ def _normalize_project_first(data: list[dict]) -> list[dict]:
                 "mw_capacity": row.get("mw_capacity"),
                 "state": row.get("state"),
                 "expected_cod": row.get("expected_cod"),
+                "lead_score": row.get("lead_score"),
                 "epc_contractor": disc.get("epc_contractor"),
                 "confidence": disc.get("confidence"),
                 "review_status": disc.get("review_status"),

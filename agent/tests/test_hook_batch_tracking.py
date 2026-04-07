@@ -34,18 +34,17 @@ async def test_ignores_non_batch():
 
 @pytest.mark.asyncio
 async def test_injects_batch_id():
-    mock_db_mod = MagicMock()
-    mock_db_mod.get_project.side_effect = lambda pid: {
-        "id": pid,
-        "project_name": f"P{pid}",
-        "queue_id": f"Q{pid}",
-    }
     mock_bp_mod = MagicMock()
     mock_bp_mod.create_batch.return_value = MagicMock(cancelled=False, projects=[], total=3)
     mock_bp_mod.get_cancel_event.return_value = MagicMock()
 
-    with patch.dict(
-        sys.modules, {"agent.src.db": mock_db_mod, "agent.src.batch_progress": mock_bp_mod}
+    # Hook uses relative imports → `src.db` and `src.batch_progress`, not `agent.src.*`
+    with (
+        patch(
+            "src.db.get_project",
+            side_effect=lambda pid: {"id": pid, "project_name": f"P{pid}", "queue_id": f"Q{pid}"},
+        ),
+        patch.dict(sys.modules, {"src.batch_progress": mock_bp_mod}),
     ):
         action = await BatchTrackingHook().pre_tool(
             "batch_research_epc", {"project_ids": [1, 2, 3]}, _ctx()
@@ -59,7 +58,7 @@ async def test_injects_batch_id():
 async def test_post_marks_done():
     hook = BatchTrackingHook()
     mock_bp_mod = MagicMock()
-    with patch.dict(sys.modules, {"agent.src.batch_progress": mock_bp_mod}):
+    with patch.dict(sys.modules, {"src.batch_progress": mock_bp_mod}):
         await hook.post_tool(
             "batch_research_epc", {"_batch_id": "batch-42"}, {"results": []}, _ctx()
         )

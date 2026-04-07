@@ -21,10 +21,15 @@ import pytest
 def _parse_sse_events(events: list[str]) -> list[dict]:
     result = []
     for e in events:
-        if e.strip() == "data: [DONE]":
+        stripped = e.strip()
+        if stripped == "data: [DONE]":
             result.append({"type": "DONE"})
-        elif e.startswith("data: "):
-            result.append(json.loads(e.removeprefix("data: ").strip()))
+        else:
+            # Events may be multi-line: "id: N\ndata: {...}\n\n"
+            for line in stripped.split("\n"):
+                if line.startswith("data: "):
+                    result.append(json.loads(line.removeprefix("data: ")))
+                    break
     return result
 
 

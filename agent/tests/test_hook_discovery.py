@@ -51,9 +51,7 @@ async def test_report_findings_triggers_persistence():
 
 @pytest.mark.asyncio
 async def test_handles_missing_project_id():
-    with patch(
-        "agent.src.parsing.parse_report_findings", return_value={"epc_contractor": "SunPower"}
-    ):
+    with patch("src.parsing.parse_report_findings", return_value={"epc_contractor": "SunPower"}):
         result = await DiscoveryHook().post_tool(
             "report_findings", {"epc_contractor": "SunPower"}, {"status": "ok"}, _ctx()
         )
