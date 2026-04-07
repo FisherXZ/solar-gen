@@ -32,7 +32,6 @@ from .agents import build_chat_runtime
 from .auth import get_user_id, require_admin
 from .batch import run_batch
 from .batch_progress import cancel_batch, cancel_batch_for_conversation, get_batch
-from .chat_agent import run_chat_agent  # legacy — kept for fallback
 from .knowledge_base import (
     build_knowledge_context,
     get_entity_with_profile,
@@ -1012,54 +1011,6 @@ async def chat(req: ChatRequest, request: Request, _user_id: str = Depends(requi
     )
 
 
-async def _run_agent_job(
-    job,
-    messages: list[dict],
-    conversation_id: str,
-    stream_writer: StreamWriter,
-    api_key: str | None = None,
-) -> None:
-    """Background wrapper: consumes the chat agent generator, pushes events to job store."""
-    try:
-        async for event in run_chat_agent(
-            messages, conversation_id, stream_writer, api_key=api_key
-        ):
-            job.append_event(event)
-        mark_job_done(job.job_id)
-    except asyncio.CancelledError:
-        logger.info("Agent job %s cancelled by user", job.job_id)
-        # Push clean stop events so the frontend closes gracefully
-        sw = StreamWriter()
-        job.append_event(sw.finish_step())
-        job.append_event(sw.finish("stop"))
-        job.append_event(sw.done())
-        # Now mark done — this notifies stream readers AFTER finish events are appended
-        mark_job_done(job.job_id)
-        db.save_message(
-            conversation_id=conversation_id,
-            role="assistant",
-            content="[Stopped by user]",
-        )
-    except anthropic.AuthenticationError:
-        error_sw = StreamWriter()
-        job.append_event(
-            error_sw.text(
-                "\n\n**Authentication failed.** Your API key is "
-                "invalid or expired. Check Settings to update it."
-            )
-        )
-        job.append_event(error_sw.finish("error"))
-        job.append_event(error_sw.done())
-        mark_job_done(job.job_id, error="Authentication failed")
-    except Exception:
-        logger.exception("Agent job %s failed", job.job_id)
-        # Push error events so any connected client sees the failure
-        error_sw = StreamWriter()
-        job.append_event(error_sw.finish("error"))
-        job.append_event(error_sw.done())
-        mark_job_done(job.job_id, error=db.sanitize_key_from_string(traceback.format_exc()[:500]))
-
-
 async def _run_agent_job_v2(
     job,
     messages: list[dict],
@@ -1083,30 +1034,27 @@ async def _run_agent_job_v2(
         full_text = ""
         all_parts: list[dict] = []
         current_text_part_id: str | None = None
-        had_tool_rounds = False
 
         def on_event(event: dict):
-            nonlocal full_text, current_text_part_id, had_tool_rounds
+            nonlocal full_text, current_text_part_id
             etype = event.get("type")
 
             if etype == "text_start":
                 current_text_part_id = str(len(all_parts))
-                if had_tool_rounds:
-                    job.append_event(stream_writer.thinking_start(current_text_part_id))
-                else:
-                    job.append_event(stream_writer.text_start(current_text_part_id))
+                job.append_event(stream_writer.text_start(current_text_part_id))
 
             elif etype == "text_delta":
                 text = event.get("text", "")
                 full_text += text
                 if current_text_part_id is not None:
-                    if had_tool_rounds:
-                        job.append_event(stream_writer.thinking_delta(current_text_part_id, text))
-                    else:
-                        job.append_event(stream_writer.text_delta(current_text_part_id, text))
+                    job.append_event(stream_writer.text_delta(current_text_part_id, text))
+
+            elif etype == "text_end":
+                if current_text_part_id is not None:
+                    job.append_event(stream_writer.text_end(current_text_part_id))
+                    current_text_part_id = None
 
             elif etype == "tool_input_start":
-                had_tool_rounds = True
                 job.append_event(
                     stream_writer.tool_input_start(
                         event.get("tool_id", ""), event.get("tool_name", "")
@@ -1114,8 +1062,9 @@ async def _run_agent_job_v2(
                 )
 
             elif etype == "tool_input_available":
-                # tool_input_available is emitted by _call_api when a tool block finishes
-                pass  # We emit tool_input_available after tool execution in the runtime loop
+                # Emitted by _call_api when tool block finishes.
+                # tool_input_available is emitted after tool execution in the runtime loop.
+                pass
 
             elif etype == "tool_result":
                 job.append_event(
@@ -1124,7 +1073,6 @@ async def _run_agent_job_v2(
                         event.get("result", {}),
                     )
                 )
-                # Build part for persistence
                 all_parts.append(
                     {
                         "type": "tool-invocation",
@@ -1136,12 +1084,12 @@ async def _run_agent_job_v2(
                 )
 
             elif etype == "escalation":
-                # Surface escalation as text to the user
                 suggestion = event.get("suggestion", "")
                 if suggestion:
-                    job.append_event(
-                        stream_writer.text_delta(str(len(all_parts)), f"\n\n{suggestion}")
-                    )
+                    esc_part_id = str(len(all_parts))
+                    job.append_event(stream_writer.text_start(esc_part_id))
+                    job.append_event(stream_writer.text_delta(esc_part_id, f"\n\n{suggestion}"))
+                    job.append_event(stream_writer.text_end(esc_part_id))
 
         await runtime.run_turn(messages, on_event)
 

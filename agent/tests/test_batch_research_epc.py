@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from src.chat_agent import _format_batch_progress
 from src.tools.batch_research_epc import DEFINITION, execute
 
 # ---------------------------------------------------------------------------
@@ -176,42 +175,3 @@ class TestExecute:
         assert result["completed"] == 1
         assert result["errors"] == 1
 
-
-# ---------------------------------------------------------------------------
-# _format_batch_progress
-# ---------------------------------------------------------------------------
-
-
-class TestFormatBatchProgress:
-    def test_started(self):
-        line = _format_batch_progress({"status": "started", "project_name": "Solar A"})
-        assert "Researching Solar A" in line
-
-    def test_completed(self):
-        line = _format_batch_progress(
-            {
-                "status": "completed",
-                "project_name": "Solar B",
-                "discovery": {"epc_contractor": "McCarthy", "confidence": "likely"},
-            }
-        )
-        assert "Solar B" in line
-        assert "McCarthy" in line
-        assert "likely" in line
-
-    def test_skipped(self):
-        line = _format_batch_progress({"status": "skipped", "project_name": "Solar C"})
-        assert "skipped" in line
-        assert "Solar C" in line
-
-    def test_error(self):
-        line = _format_batch_progress({"status": "error", "project_name": "Solar D"})
-        assert "error" in line
-        assert "Solar D" in line
-
-    def test_unknown_status_returns_none(self):
-        assert _format_batch_progress({"status": "unknown_thing"}) is None
-
-    def test_falls_back_to_project_id(self):
-        line = _format_batch_progress({"status": "started", "project_id": "proj-123"})
-        assert "proj-123" in line

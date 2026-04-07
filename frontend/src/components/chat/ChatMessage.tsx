@@ -4,7 +4,6 @@ import type { UIMessage } from "ai";
 import FileAttachment from "./FileAttachment";
 import ToolPart from "./ToolPart";
 import MarkdownMessage from "./MarkdownMessage";
-import ThinkingAccordion from "./ThinkingAccordion";
 import ResearchTimeline from "./ResearchTimeline";
 import SourceSummaryBar from "./SourceSummaryBar";
 
@@ -42,14 +41,6 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
       // Skip non-tool, non-text parts (source-url, step-start, reasoning, file, etc.)
     }
   }
-
-  // Find the last tool group index — text after this is "response", text before is "thinking"
-  const lastToolGroupIndex = (() => {
-    for (let i = partGroups.length - 1; i >= 0; i--) {
-      if (partGroups[i].type === "tool") return i;
-    }
-    return -1; // no tools at all — everything is response
-  })();
 
   // Find the index of the very last text part (for streaming animation)
   const lastTextIndex = (() => {
@@ -136,8 +127,7 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
   // ─── Build timeline stages if in timeline mode ───
   function buildTimelineStages() {
-    // Separate thinking, tool, and response groups
-    const thinkingGroups: Array<{ type: "text"; parts: { text: string; index: number }[] }> = [];
+    // Separate tool and response groups
     const responseGroups: Array<{ type: "text"; parts: { text: string; index: number }[] }> = [];
     const toolSequence: Array<{
       type: "tool";
@@ -147,9 +137,7 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
     for (const group of partGroups) {
       if (group.type === "text") {
-        const isThinking = lastToolGroupIndex >= 0 && partGroups.indexOf(group) <= lastToolGroupIndex;
-        if (isThinking) thinkingGroups.push(group);
-        else responseGroups.push(group);
+        responseGroups.push(group);
       } else {
         toolSequence.push(group);
       }
@@ -210,12 +198,12 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
       }
     }
 
-    return { thinkingGroups, responseGroups, stages };
+    return { responseGroups, stages };
   }
 
   // ─── Assistant message: Timeline mode ───
   if (useTimeline) {
-    const { thinkingGroups, responseGroups, stages } = buildTimelineStages();
+    const { responseGroups, stages } = buildTimelineStages();
 
     const timelineStages = stages.map((stage) => ({
       name: stage.name,
@@ -225,20 +213,6 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
 
     return (
       <div className="space-y-2">
-        {/* Thinking accordions */}
-        {thinkingGroups.map((group, gi) => {
-          const thinkingTexts = group.parts.map((tp) => tp.text).filter(Boolean);
-          const isThinkingStreaming =
-            isStreaming && group.parts.some((tp) => tp.index === lastTextIndex);
-          return (
-            <ThinkingAccordion
-              key={`thinking-${gi}`}
-              texts={thinkingTexts}
-              isStreaming={isThinkingStreaming}
-            />
-          );
-        })}
-
         {/* Research timeline */}
         <ResearchTimeline stages={timelineStages} />
 
@@ -266,22 +240,6 @@ export default function ChatMessage({ message, isStreaming = false }: ChatMessag
     <div className="space-y-2">
       {partGroups.map((group, gi) => {
         if (group.type === "text") {
-          const isThinking = lastToolGroupIndex >= 0 && gi <= lastToolGroupIndex;
-
-          if (isThinking) {
-            const thinkingTexts = group.parts.map((tp) => tp.text).filter(Boolean);
-            const isThinkingStreaming =
-              isStreaming &&
-              group.parts.some((tp) => tp.index === lastTextIndex);
-            return (
-              <ThinkingAccordion
-                key={`thinking-${gi}`}
-                texts={thinkingTexts}
-                isStreaming={isThinkingStreaming}
-              />
-            );
-          }
-
           return (
             <div key={`text-${gi}`} className="text-text-primary pt-1">
               {group.parts.map((tp) => (
