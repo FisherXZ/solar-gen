@@ -2,10 +2,10 @@
 // frontend/src/app/briefing/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import BriefingDashboard from "@/components/briefing/BriefingDashboard";
+import BriefingHeader from "@/components/briefing/BriefingHeader";
 import type { PendingDiscovery } from "@/components/briefing/NeedsReviewPanel";
 import type { UnresearchedProject } from "@/components/briefing/NeedsInvestigationPanel";
 import type { NeedContactsItem, CrmReadyItem } from "@/components/briefing/ContactsPanel";
-import type { CompletedItem } from "@/components/briefing/RecentlyCompletedPanel";
 
 export const revalidate = 300; // 5 minute ISR
 
@@ -213,35 +213,10 @@ export default async function BriefingPage() {
     });
   }
 
-  // Panel 4: Recently Completed (accepted discoveries, most recent)
-  const recentlyCompleted: CompletedItem[] = acceptedDiscoveries
-    .slice(0, 5)
-    .map((d: any) => {
-      const p = d.projects as any;
-      const contactCount = entitiesWithContacts.has(d.entity_id) ? 1 : 0; // Approximate
-      return {
-        discovery_id: d.id,
-        project_id: d.project_id,
-        epc_contractor: d.epc_contractor,
-        project_name: p?.project_name || "Unknown Project",
-        mw_capacity: p?.mw_capacity ?? null,
-        contact_count: contactCount,
-        has_hubspot_sync: hubspotProjectIds.has(d.project_id),
-        completed_at: d.created_at,
-      };
-    });
-
   // ─── Render ──────────────────────────────────────────────────────────
   return (
     <main className="mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl tracking-tight text-text-primary">
-          Briefing
-        </h1>
-        <p className="mt-1 text-sm text-text-tertiary">
-          Your command center for leads, reviews, and pipeline actions.
-        </p>
-      </div>
+      <BriefingHeader />
 
       <BriefingDashboard
         funnel={funnel}
@@ -251,7 +226,6 @@ export default async function BriefingPage() {
         totalUnresearched={totalUnresearched}
         needContacts={needContacts}
         crmReady={crmReady}
-        recentlyCompleted={recentlyCompleted}
       />
     </main>
   );

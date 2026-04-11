@@ -7,16 +7,12 @@ import BriefingDashboard, {
 } from "./BriefingDashboard";
 
 // Mock all child panels to isolate the shell
-vi.mock("./PipelineFunnel", () => ({
+vi.mock("./PipelineHealthFooter", () => ({
   default: (props: any) => (
-    <div data-testid="pipeline-funnel">
-      Funnel: {props.totalProjects}/{props.pendingReview}
+    <div data-testid="pipeline-health-footer">
+      Footer: {props.totalProjects}/{props.pendingReview}
     </div>
   ),
-}));
-
-vi.mock("./QuickNav", () => ({
-  default: () => <div data-testid="quick-nav">QuickNav</div>,
 }));
 
 vi.mock("./NeedsReviewPanel", () => ({
@@ -39,14 +35,6 @@ vi.mock("./ContactsPanel", () => ({
   default: (props: any) => (
     <div data-testid="contacts-panel">
       Contacts: {props.needContacts.length + props.crmReady.length} items
-    </div>
-  ),
-}));
-
-vi.mock("./RecentlyCompletedPanel", () => ({
-  default: (props: any) => (
-    <div data-testid="recently-completed">
-      Completed: {props.items.length} items
     </div>
   ),
 }));
@@ -92,35 +80,21 @@ const mockProps: BriefingDashboardProps = {
     },
   ],
   crmReady: [],
-  recentlyCompleted: [
-    {
-      discovery_id: "d3",
-      project_id: "p4",
-      epc_contractor: "Mortenson",
-      project_name: "Solar D",
-      mw_capacity: 300,
-      contact_count: 2,
-      has_hubspot_sync: false,
-      completed_at: new Date().toISOString(),
-    },
-  ],
 };
 
 describe("BriefingDashboard", () => {
-  it("renders all 6 sub-components", () => {
+  it("renders all sub-components", () => {
     render(<BriefingDashboard {...mockProps} />);
-    expect(screen.getByTestId("pipeline-funnel")).toBeInTheDocument();
-    expect(screen.getByTestId("quick-nav")).toBeInTheDocument();
     expect(screen.getByTestId("needs-review")).toBeInTheDocument();
     expect(screen.getByTestId("needs-investigation")).toBeInTheDocument();
     expect(screen.getByTestId("contacts-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("recently-completed")).toBeInTheDocument();
+    expect(screen.getByTestId("pipeline-health-footer")).toBeInTheDocument();
   });
 
-  it("passes funnel counts to PipelineFunnel", () => {
+  it("passes funnel counts to PipelineHealthFooter", () => {
     render(<BriefingDashboard {...mockProps} />);
-    expect(screen.getByTestId("pipeline-funnel")).toHaveTextContent(
-      "Funnel: 423/61"
+    expect(screen.getByTestId("pipeline-health-footer")).toHaveTextContent(
+      "Footer: 423/61"
     );
   });
 
@@ -131,8 +105,5 @@ describe("BriefingDashboard", () => {
       "1 items"
     );
     expect(screen.getByTestId("contacts-panel")).toHaveTextContent("1 items");
-    expect(screen.getByTestId("recently-completed")).toHaveTextContent(
-      "1 items"
-    );
   });
 });

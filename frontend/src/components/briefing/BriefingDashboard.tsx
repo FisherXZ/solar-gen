@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import PipelineFunnel from "./PipelineFunnel";
-import QuickNav from "./QuickNav";
+import PipelineHealthFooter from "./PipelineHealthFooter";
 import NeedsReviewPanel, { PendingDiscovery } from "./NeedsReviewPanel";
 import NeedsInvestigationPanel, {
   UnresearchedProject,
@@ -12,9 +11,6 @@ import ContactsPanel, {
   NeedContactsItem,
   CrmReadyItem,
 } from "./ContactsPanel";
-import RecentlyCompletedPanel, {
-  CompletedItem,
-} from "./RecentlyCompletedPanel";
 
 export interface BriefingDashboardProps {
   funnel: {
@@ -30,7 +26,6 @@ export interface BriefingDashboardProps {
   totalUnresearched: number;
   needContacts: NeedContactsItem[];
   crmReady: CrmReadyItem[];
-  recentlyCompleted: CompletedItem[];
 }
 
 export default function BriefingDashboard({
@@ -41,7 +36,6 @@ export default function BriefingDashboard({
   totalUnresearched,
   needContacts,
   crmReady,
-  recentlyCompleted,
 }: BriefingDashboardProps) {
   const [funnel, setFunnel] = useState(initialFunnel);
 
@@ -49,26 +43,14 @@ export default function BriefingDashboard({
     setFunnel((prev) => ({
       ...prev,
       pendingReview: Math.max(0, prev.pendingReview + delta),
-      accepted: prev.accepted - delta, // approve decreases pending, increases accepted
+      accepted: prev.accepted - delta,
     }));
   }, []);
 
   return (
-    <div className="space-y-5">
-      {/* Pipeline Funnel */}
-      <PipelineFunnel
-        totalProjects={funnel.totalProjects}
-        researched={funnel.researched}
-        pendingReview={funnel.pendingReview}
-        accepted={funnel.accepted}
-        inCrm={funnel.inCrm}
-      />
-
-      {/* Quick Nav */}
-      <QuickNav />
-
-      {/* 2x2 Action Grid */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    <div className="space-y-6">
+      {/* Top row: Review + Research */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <NeedsReviewPanel
           discoveries={pendingDiscoveries}
           totalPending={totalPending}
@@ -78,9 +60,19 @@ export default function BriefingDashboard({
           projects={unresearchedProjects}
           totalUnresearched={totalUnresearched}
         />
-        <ContactsPanel needContacts={needContacts} crmReady={crmReady} />
-        <RecentlyCompletedPanel items={recentlyCompleted} />
       </div>
+
+      {/* Second row: Contacts & CRM */}
+      <ContactsPanel needContacts={needContacts} crmReady={crmReady} />
+
+      {/* Footer: pipeline health */}
+      <PipelineHealthFooter
+        totalProjects={funnel.totalProjects}
+        researched={funnel.researched}
+        pendingReview={funnel.pendingReview}
+        accepted={funnel.accepted}
+        inCrm={funnel.inCrm}
+      />
     </div>
   );
 }
