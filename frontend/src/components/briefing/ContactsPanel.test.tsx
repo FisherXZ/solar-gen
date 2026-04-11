@@ -189,7 +189,7 @@ describe("ContactsPanel", () => {
         crmReady={mockCrmReady}
       />
     );
-    const link = screen.getByText("Actions →");
+    const link = screen.getByText("View all contacts & CRM →");
     expect(link.closest("a")).toHaveAttribute("href", "/actions");
   });
 });

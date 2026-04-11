@@ -76,7 +76,7 @@ describe("NeedsReviewPanel", () => {
     render(
       <NeedsReviewPanel discoveries={mockDiscoveries} totalPending={10} />
     );
-    const viewAll = screen.getByText("View all →");
+    const viewAll = screen.getByText(/View all \d+ →/);
     expect(viewAll.closest("a")).toHaveAttribute("href", "/review");
   });
 

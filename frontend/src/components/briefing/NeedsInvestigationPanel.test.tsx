@@ -1,71 +1,84 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // frontend/src/components/briefing/NeedsInvestigationPanel.test.tsx
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import NeedsInvestigationPanel, {
-  UnresearchedProject,
-} from "./NeedsInvestigationPanel";
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import NeedsInvestigationPanel from "./NeedsInvestigationPanel";
 
+// Mock agentFetch
 vi.mock("@/lib/agent-fetch", () => ({
   agentFetch: vi.fn(),
 }));
 
-import { agentFetch } from "@/lib/agent-fetch";
-const mockAgentFetch = vi.mocked(agentFetch);
-
-const mockProjects: UnresearchedProject[] = [
+const mockProjects = [
   {
     id: "p1",
-    project_name: "Solar Ranch Alpha",
+    project_name: "Davis Creek 345 kV",
     iso_region: "ERCOT",
     state: "TX",
-    lead_score: 90,
+    lead_score: 94,
   },
   {
     id: "p2",
-    project_name: "Sunbeam Beta",
-    iso_region: "CAISO",
-    state: "CA",
-    lead_score: 75,
+    project_name: "Mt. Storm 500 kV",
+    iso_region: "PJM",
+    state: "WV",
+    lead_score: 91,
+  },
+  {
+    id: "p3",
+    project_name: "Wheatley Switching",
+    iso_region: "MISO",
+    state: null,
+    lead_score: 89,
   },
 ];
 
 describe("NeedsInvestigationPanel", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it("renders project list with names and lead scores", () => {
+    render(
+      <NeedsInvestigationPanel
+        projects={mockProjects}
+        totalUnresearched={2847}
+      />
+    );
+    expect(screen.getByText("Davis Creek 345 kV")).toBeInTheDocument();
+    expect(screen.getByText("Mt. Storm 500 kV")).toBeInTheDocument();
+    expect(screen.getByText("94")).toBeInTheDocument();
+    expect(screen.getByText("91")).toBeInTheDocument();
   });
 
-  it("renders project cards with name and context", () => {
+  it("renders Research Queue header with total count", () => {
     render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
+      <NeedsInvestigationPanel
+        projects={mockProjects}
+        totalUnresearched={2847}
+      />
     );
-    expect(screen.getByText("Solar Ranch Alpha")).toBeInTheDocument();
-    expect(screen.getByText("Sunbeam Beta")).toBeInTheDocument();
-    expect(screen.getByText("ERCOT · TX · Score 90")).toBeInTheDocument();
+    expect(screen.getByText("Research Queue")).toBeInTheDocument();
+    expect(screen.getByText("2,847")).toBeInTheDocument();
   });
 
-  it("renders Research button for each project", () => {
+  it("renders View full pipeline link", () => {
     render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
+      <NeedsInvestigationPanel
+        projects={mockProjects}
+        totalUnresearched={2847}
+      />
     );
-    expect(screen.getAllByText("Research")).toHaveLength(2);
-  });
-
-  it("renders View pipeline link", () => {
-    render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
-    );
-    const link = screen.getByText("View pipeline →");
+    const link = screen.getByText("View full pipeline →");
     expect(link.closest("a")).toHaveAttribute("href", "/projects");
   });
 
-  it("renders project links to detail pages", () => {
+  it("renders batch research button with project count", () => {
     render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
+      <NeedsInvestigationPanel
+        projects={mockProjects}
+        totalUnresearched={2847}
+      />
     );
-    const links = screen.getAllByRole("link");
-    const hrefs = links.map((l) => l.getAttribute("href"));
-    expect(hrefs).toContain("/projects/p1");
-    expect(hrefs).toContain("/projects/p2");
+    expect(
+      screen.getByText(`Research these ${mockProjects.length} →`)
+    ).toBeInTheDocument();
   });
 
   it("shows empty state when no projects", () => {
@@ -77,63 +90,16 @@ describe("NeedsInvestigationPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls plan then execute on Research click", async () => {
-    mockAgentFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ plan: "test-plan" }),
-      } as Response)
-      .mockResolvedValueOnce({ ok: true } as Response);
-
+  it("renders project context with region and state", () => {
     render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
+      <NeedsInvestigationPanel
+        projects={mockProjects}
+        totalUnresearched={2847}
+      />
     );
-
-    fireEvent.click(screen.getAllByText("Research")[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText("Done")).toBeInTheDocument();
-    });
-
-    expect(mockAgentFetch).toHaveBeenCalledTimes(2);
-    expect(mockAgentFetch).toHaveBeenNthCalledWith(
-      1,
-      "/api/discover/plan",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ project_id: "p1" }),
-      })
-    );
-    expect(mockAgentFetch).toHaveBeenNthCalledWith(
-      2,
-      "/api/discover",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ project_id: "p1", plan: "test-plan" }),
-      })
-    );
-  });
-
-  it("shows error when plan step fails", async () => {
-    mockAgentFetch.mockResolvedValueOnce({ ok: false } as Response);
-
-    render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={20} />
-    );
-
-    fireEvent.click(screen.getAllByText("Research")[0]);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Failed to generate research plan.")
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("shows + N more footer when there are more projects", () => {
-    render(
-      <NeedsInvestigationPanel projects={mockProjects} totalUnresearched={50} />
-    );
-    expect(screen.getByText("Top by lead score · 48 more")).toBeInTheDocument();
+    expect(screen.getByText("ERCOT · TX")).toBeInTheDocument();
+    expect(screen.getByText("PJM · WV")).toBeInTheDocument();
+    // Wheatley has no state, so just region
+    expect(screen.getByText("MISO")).toBeInTheDocument();
   });
 });
