@@ -13,7 +13,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import anthropic
 
@@ -30,21 +30,39 @@ CACHE_TTL_DAYS = 30
 # ──────────────────────────────────────────────────────────────
 
 UTILITY_ALLOWLIST = {
-    "SCE", "SOUTHERN CALIFORNIA EDISON",
-    "PGAE", "PG&E", "PACIFIC GAS & ELECTRIC", "PACIFIC GAS AND ELECTRIC",
-    "SDGE", "SAN DIEGO GAS & ELECTRIC",
+    "SCE",
+    "SOUTHERN CALIFORNIA EDISON",
+    "PGAE",
+    "PG&E",
+    "PACIFIC GAS & ELECTRIC",
+    "PACIFIC GAS AND ELECTRIC",
+    "SDGE",
+    "SAN DIEGO GAS & ELECTRIC",
     "DCRT",
-    "ENTERGY ARKANSAS", "ENTERGY LOUISIANA", "ENTERGY MISSISSIPPI",
-    "ENTERGY TEXAS", "ENTERGY NEW ORLEANS",
-    "AMEREN ILLINOIS", "AMEREN MISSOURI",
+    "ENTERGY ARKANSAS",
+    "ENTERGY LOUISIANA",
+    "ENTERGY MISSISSIPPI",
+    "ENTERGY TEXAS",
+    "ENTERGY NEW ORLEANS",
+    "AMEREN ILLINOIS",
+    "AMEREN MISSOURI",
     "AMEREN TRANSMISSION COMPANY OF ILLINOIS",
-    "AEP", "AMERICAN ELECTRIC POWER", "AEP INDIANA MICHIGAN", "I&M",
-    "JCPL", "JERSEY CENTRAL POWER & LIGHT",
+    "AEP",
+    "AMERICAN ELECTRIC POWER",
+    "AEP INDIANA MICHIGAN",
+    "I&M",
+    "JCPL",
+    "JERSEY CENTRAL POWER & LIGHT",
     "HOOSIER ENERGY",
     "CENTERPOINT ENERGY INDIANA SOUTH",
-    "SOUTHERN COMPANY", "ALABAMA POWER", "GEORGIA POWER", "MISSISSIPPI POWER",
-    "DOMINION", "DOMINION ENERGY",
-    "APS", "ARIZONA PUBLIC SERVICE",
+    "SOUTHERN COMPANY",
+    "ALABAMA POWER",
+    "GEORGIA POWER",
+    "MISSISSIPPI POWER",
+    "DOMINION",
+    "DOMINION ENERGY",
+    "APS",
+    "ARIZONA PUBLIC SERVICE",
 }
 
 
@@ -85,11 +103,17 @@ def _is_poi_name(name: str | None) -> bool:
 # Rule 3: Optional LLM name resolution
 # ──────────────────────────────────────────────────────────────
 
-_RESOLVE_SYSTEM_PROMPT = """You are a project-name resolver. Your job is to map an interconnection queue entry (which may use substation names or utility names as identifiers) to the public marketing name of the underlying solar project and its real developer.
+_RESOLVE_SYSTEM_PROMPT = """You are a project-name resolver. Your job is to map
+an interconnection queue entry (which may use substation names or utility names
+as identifiers) to the public marketing name of the underlying solar project
+and its real developer.
 
 Rules:
-- The "utility" in US interconnection queues (SCE, PG&E, Entergy, Ameren, AEP, etc.) is almost never the developer. It's the grid owner at the point of interconnection.
-- Transmission-line names (e.g., "Reynolds - Olive 345 kV") describe WHERE the project connects, not what it's called.
+- The "utility" in US interconnection queues (SCE, PG&E, Entergy, Ameren, AEP,
+  etc.) is almost never the developer. It's the grid owner at the point of
+  interconnection.
+- Transmission-line names (e.g., "Reynolds - Olive 345 kV") describe WHERE the
+  project connects, not what it's called.
 - You have budget for 3 web_search or fetch_page calls total. Use them wisely.
 - If you can't find a confident match, return project_name=null and explain.
 - Do NOT attempt to find the EPC contractor — that's a separate step."""
@@ -110,8 +134,14 @@ _RESOLVE_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "project_name": {"type": "string", "description": "The public marketing name, or null if unknown"},
-                "developer": {"type": "string", "description": "The real generation owner, or null"},
+                "project_name": {
+                    "type": "string",
+                    "description": "The public marketing name, or null if unknown",
+                },
+                "developer": {
+                    "type": "string",
+                    "description": "The real generation owner, or null",
+                },
                 "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
                 "explanation": {"type": "string"},
             },
@@ -188,29 +218,37 @@ async def _resolve_project_name(
                 tool_calls_used += 1
                 try:
                     search_result = await execute_tool("web_search", block.input)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(search_result) if isinstance(search_result, dict) else str(search_result),
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps(search_result)
+                            if isinstance(search_result, dict)
+                            else str(search_result),
+                        }
+                    )
                     # Track URLs from results as sources
                     if isinstance(search_result, dict):
                         for r in search_result.get("results", []):
                             if r.get("url"):
                                 sources.append(r["url"])
                 except Exception as e:
-                    tool_results.append({
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps({"error": str(e)}),
+                            "is_error": True,
+                        }
+                    )
+            else:
+                tool_results.append(
+                    {
                         "type": "tool_result",
                         "tool_use_id": block.id,
-                        "content": json.dumps({"error": str(e)}),
-                        "is_error": True,
-                    })
-            else:
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": "Budget exhausted. Call resolve_result now.",
-                })
+                        "content": "Budget exhausted. Call resolve_result now.",
+                    }
+                )
 
         if tool_results:
             messages.append({"role": "assistant", "content": response.content})
@@ -222,6 +260,7 @@ async def _resolve_project_name(
 # ──────────────────────────────────────────────────────────────
 # Main triage function
 # ──────────────────────────────────────────────────────────────
+
 
 async def triage_project(
     project: dict,
@@ -249,7 +288,7 @@ async def triage_project(
                 cached = resp.data[0]["triage_result"]
                 triaged_at = cached.get("triaged_at")
                 if triaged_at:
-                    age = datetime.now(timezone.utc) - datetime.fromisoformat(triaged_at)
+                    age = datetime.now(UTC) - datetime.fromisoformat(triaged_at)
                     if age < timedelta(days=CACHE_TTL_DAYS):
                         triage_log.append({"rule": "cache_hit", "age_days": age.days})
                         return TriageResult(
@@ -282,7 +321,9 @@ async def triage_project(
         return result
 
     # Rule 3: Resolve project name
-    triage_log.append({"rule": "resolve_project_name", "triggered_by": "utility" if is_utility else "poi"})
+    triage_log.append(
+        {"rule": "resolve_project_name", "triggered_by": "utility" if is_utility else "poi"}
+    )
 
     resolution = await _resolve_project_name(project, api_key)
     triage_log.append({"resolution": resolution})
@@ -338,8 +379,10 @@ def _persist_triage(project_id: str | None, result: TriageResult) -> None:
             "action": result.action,
             "skip_reason": result.skip_reason,
             "corrected_project": result.corrected_project,
-            "triaged_at": datetime.now(timezone.utc).isoformat(),
+            "triaged_at": datetime.now(UTC).isoformat(),
         }
-        client.table("projects").update({"triage_result": json.dumps(payload)}).eq("id", project_id).execute()
+        client.table("projects").update({"triage_result": json.dumps(payload)}).eq(
+            "id", project_id
+        ).execute()
     except Exception as e:
         logger.warning("Failed to persist triage result: %s", e)

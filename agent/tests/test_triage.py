@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.models import TriageResult
 from src.triage import _is_poi_name, _is_utility, triage_project
-
 
 # ──────────────────────────────────────────────────────────────
 # Rule 1: Utility allow-list
@@ -65,9 +63,13 @@ def _mock_db_no_cache():
     mock_client = MagicMock()
     mock_resp = MagicMock()
     mock_resp.data = [{"triage_result": None}]
-    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+        mock_resp
+    )
     # Also mock update chain for _persist_triage
-    mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
+    mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+        MagicMock()
+    )
     return mock_client
 
 
@@ -184,7 +186,7 @@ async def test_resolve_fails(mock_get_client, mock_resolve, sample_project):
 async def test_cache_reuse(mock_get_client, sample_project):
     """Fresh cached triage_result -> used directly, no resolution."""
     mock_client = MagicMock()
-    fresh_triaged_at = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+    fresh_triaged_at = (datetime.now(UTC) - timedelta(days=5)).isoformat()
     cached_result = {
         "action": "skip",
         "skip_reason": "utility_as_developer_unresolved",
@@ -193,7 +195,9 @@ async def test_cache_reuse(mock_get_client, sample_project):
     }
     mock_resp = MagicMock()
     mock_resp.data = [{"triage_result": cached_result}]
-    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+        mock_resp
+    )
     mock_get_client.return_value = mock_client
 
     result = await triage_project(sample_project)
@@ -210,7 +214,7 @@ async def test_cache_reuse(mock_get_client, sample_project):
 async def test_cache_expired(mock_get_client, mock_resolve, sample_project):
     """Expired cached triage_result -> re-triages from scratch."""
     mock_client = MagicMock()
-    old_triaged_at = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
+    old_triaged_at = (datetime.now(UTC) - timedelta(days=60)).isoformat()
     cached_result = {
         "action": "skip",
         "skip_reason": "utility_as_developer_unresolved",
@@ -219,9 +223,13 @@ async def test_cache_expired(mock_get_client, mock_resolve, sample_project):
     }
     mock_resp = MagicMock()
     mock_resp.data = [{"triage_result": cached_result}]
-    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_resp
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+        mock_resp
+    )
     # Also mock update chain for _persist_triage
-    mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
+    mock_client.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+        MagicMock()
+    )
     mock_get_client.return_value = mock_client
 
     mock_resolve.return_value = {
