@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+from datetime import UTC
 
 import anthropic
 from supabase import Client, create_client
@@ -706,3 +707,148 @@ def list_conversations(limit: int = 20, user_id: str | None = None) -> list[dict
     if user_id:
         query = query.eq("user_id", user_id)
     return query.order("updated_at", desc=True).limit(limit).execute().data
+
+
+# ---------------------------------------------------------------------------
+# Share links (public snapshot of a conversation — see migration 029)
+# ---------------------------------------------------------------------------
+
+
+def _get_conversation_share_row(conversation_id: str) -> dict | None:
+    """Return {user_id, share_token, shared_at} for a conversation, or None."""
+    client = get_client()
+    resp = (
+        client.table("chat_conversations")
+        .select("user_id, share_token, shared_at")
+        .eq("id", conversation_id)
+        .maybe_single()
+        .execute()
+    )
+    if resp and resp.data:
+        return resp.data
+    return None
+
+
+def get_share_state(conversation_id: str, user_id: str) -> dict | None:
+    """Return current share state for a conversation (for owner preview).
+
+    Shape: {"token": str|None, "shared_at": str|None} or None if not owned.
+    """
+    row = _get_conversation_share_row(conversation_id)
+    if not row or row.get("user_id") != user_id:
+        return None
+    return {"token": row.get("share_token"), "shared_at": row.get("shared_at")}
+
+
+def set_share_token(
+    conversation_id: str,
+    user_id: str,
+    token: str,
+) -> dict | None:
+    """Assign a share token + shared_at to a conversation.
+
+    Idempotent: if the conversation already has a share token, returns the
+    existing one unchanged (preserves the original snapshot). To regenerate,
+    caller must clear_share_token() first.
+
+    Returns {"token": str, "shared_at": str} or None if not owned.
+    """
+    row = _get_conversation_share_row(conversation_id)
+    if not row or row.get("user_id") != user_id:
+        return None
+
+    # Already shared — return existing snapshot
+    if row.get("share_token"):
+        return {"token": row["share_token"], "shared_at": row.get("shared_at")}
+
+    from datetime import datetime
+
+    client = get_client()
+    now_iso = datetime.now(UTC).isoformat()
+    resp = (
+        client.table("chat_conversations")
+        .update({"share_token": token, "shared_at": now_iso})
+        .eq("id", conversation_id)
+        .execute()
+    )
+    if not resp.data:
+        return None
+    updated = resp.data[0]
+    return {
+        "token": updated.get("share_token"),
+        "shared_at": updated.get("shared_at"),
+    }
+
+
+def clear_share_token(conversation_id: str, user_id: str) -> bool:
+    """Revoke a conversation's share link. Returns True if updated."""
+    row = _get_conversation_share_row(conversation_id)
+    if not row or row.get("user_id") != user_id:
+        return False
+
+    client = get_client()
+    resp = (
+        client.table("chat_conversations")
+        .update({"share_token": None, "shared_at": None})
+        .eq("id", conversation_id)
+        .execute()
+    )
+    return bool(resp.data)
+
+
+def fetch_shared_conversation(token: str) -> dict | None:
+    """Fetch a shared conversation snapshot via the SECURITY DEFINER function.
+
+    Returns a dict shaped like:
+        {
+            "conversation": {"id": ..., "title": ..., "shared_at": ...},
+            "messages": [{"id", "role", "content", "parts", "created_at"}, ...]
+        }
+    or None if the token is invalid / revoked / snapshot is empty.
+    """
+    if not token:
+        return None
+    client = get_client()
+    resp = client.rpc("get_shared_conversation", {"p_token": token}).execute()
+    rows = resp.data or []
+    if not rows:
+        return None
+
+    first = rows[0]
+    conversation = {
+        "id": first.get("conversation_id"),
+        "title": first.get("title"),
+        "shared_at": first.get("shared_at"),
+    }
+    messages = [
+        {
+            "id": r.get("message_id"),
+            "role": r.get("role"),
+            "content": r.get("content", ""),
+            "parts": r.get("parts") or [],
+            "created_at": r.get("created_at"),
+        }
+        for r in rows
+    ]
+    return {"conversation": conversation, "messages": messages}
+
+
+def log_share_access(
+    token: str,
+    conversation_id: str,
+    ip_hash: str | None,
+    user_agent: str | None,
+) -> None:
+    """Best-effort audit log write. Never raises."""
+    try:
+        client = get_client()
+        client.table("chat_share_access_log").insert(
+            {
+                "share_token": token,
+                "conversation_id": conversation_id,
+                "ip_hash": ip_hash,
+                "user_agent": user_agent,
+            }
+        ).execute()
+    except Exception:
+        logger.warning("share_access_log write failed token=%s", token[:6])

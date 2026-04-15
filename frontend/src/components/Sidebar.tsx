@@ -44,6 +44,11 @@ export default function Sidebar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
 
+  // Public share pages have no sidebar (visitor may not be logged in)
+  if (pathname?.startsWith("/share/")) {
+    return null;
+  }
+
   return (
     <>
       {/* Mobile hamburger */}

@@ -1232,3 +1232,116 @@ def get_conversations(_user_id: str = Depends(require_auth)):
 def get_conversation_messages(conversation_id: str, _user_id: str = Depends(require_auth)):
     """Get all messages for a conversation (only if owned by current user)."""
     return db.get_conversation_messages(conversation_id, user_id=_user_id)
+
+
+# ---------------------------------------------------------------------------
+# Share links (see migration 029 + agent/src/share_sanitizer.py)
+# ---------------------------------------------------------------------------
+import hashlib  # noqa: E402
+import secrets  # noqa: E402
+from datetime import date  # noqa: E402
+
+from .share_sanitizer import sanitize_messages  # noqa: E402
+
+
+def _hash_ip(ip: str | None) -> str | None:
+    """Daily-salted SHA-256 of the client IP — stable within a day, not reversible."""
+    if not ip:
+        return None
+    salt = date.today().isoformat()
+    return hashlib.sha256(f"{salt}:{ip}".encode()).hexdigest()[:32]
+
+
+def _client_ip(request: Request) -> str | None:
+    """Best-effort client IP from X-Forwarded-For / X-Real-IP / request.client."""
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    real = request.headers.get("x-real-ip")
+    if real:
+        return real.strip()
+    return request.client.host if request.client else None
+
+
+@app.get("/api/conversations/{conversation_id}/share")
+def get_share_state(conversation_id: str, _user_id: str = Depends(require_auth)):
+    """Return the current share state for a conversation (owner only).
+
+    Shape: {"token": str|None, "shared_at": str|None}. 404 if not owned.
+    """
+    state = db.get_share_state(conversation_id, _user_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {
+        "token": state["token"],
+        "shared_at": state["shared_at"],
+        "path": f"/share/{state['token']}" if state["token"] else None,
+    }
+
+
+@app.post("/api/conversations/{conversation_id}/share")
+def create_share_link(conversation_id: str, _user_id: str = Depends(require_auth)):
+    """Create a share link for a conversation (idempotent).
+
+    If already shared, returns the existing token unchanged. To regenerate,
+    call DELETE first then POST again.
+
+    Blocks with 409 if an agent job is still running — snapshots of an
+    in-progress conversation produce half-rendered pages.
+    """
+    if get_active_job_for_conversation(conversation_id):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "wait_for_completion",
+                "message": "Wait for the current response to finish before sharing.",
+            },
+        )
+
+    token = secrets.token_urlsafe(16)  # ~22 chars, ~128-bit entropy
+    result = db.set_share_token(conversation_id, _user_id, token)
+    if not result:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return {
+        "token": result["token"],
+        "shared_at": result["shared_at"],
+        "path": f"/share/{result['token']}",
+    }
+
+
+@app.delete("/api/conversations/{conversation_id}/share")
+def revoke_share_link(conversation_id: str, _user_id: str = Depends(require_auth)):
+    """Revoke a conversation's share link. Subsequent fetches return 404."""
+    ok = db.clear_share_token(conversation_id, _user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"status": "revoked"}
+
+
+@app.get("/api/share/{token}")
+def fetch_share(token: str, request: Request):
+    """PUBLIC — no auth required. Returns a sanitized conversation snapshot.
+
+    Messages are filtered server-side by the SECURITY DEFINER SQL function to
+    `created_at <= shared_at`, then sanitized to drop internal-only tools.
+    """
+    snapshot = db.fetch_shared_conversation(token)
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="not_found")
+
+    # Audit the access (best-effort; never fails the request).
+    try:
+        db.log_share_access(
+            token=token,
+            conversation_id=snapshot["conversation"]["id"],
+            ip_hash=_hash_ip(_client_ip(request)),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except Exception:
+        logger.warning("share access log raised unexpectedly", exc_info=True)
+
+    return {
+        "conversation": snapshot["conversation"],
+        "messages": sanitize_messages(snapshot["messages"]),
+    }
