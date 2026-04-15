@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -60,6 +62,14 @@ class ResearchError(BaseModel):
     category: str
     message: str  # human-readable description
     detail: str | None = None
+
+
+class TriageResult(BaseModel):
+    action: Literal["research", "skip"] = "research"
+    corrected_project: dict | None = None  # project dict with resolved name/developer
+    skip_reason: str | None = None  # machine-readable code
+    triage_log: list[dict] = []  # rules fired, tools called, findings
+    tokens_used: int = 0
 
 
 class AgentResult(BaseModel):
