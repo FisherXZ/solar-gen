@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { agentFetch, agentHeaders, AGENT_API_URL } from "@/lib/agent-fetch";
 import ChatMessage from "./ChatMessage";
 import FileAttachment from "./FileAttachment";
+import ShareButton from "./ShareButton";
 import SuggestedPrompts from "./SuggestedPrompts";
 import WaitingIndicator from "./WaitingIndicator";
 
@@ -625,6 +626,12 @@ export default function ChatInterface({ initialContext }: ChatInterfaceProps) {
           <h2 className="text-sm font-medium text-text-primary">
             EPC Discovery Chat
           </h2>
+          <div className="ml-auto">
+            <ShareButton
+              conversationId={conversationId}
+              isJobActive={isLoading}
+            />
+          </div>
         </div>
 
         {/* Messages — drop zone */}
