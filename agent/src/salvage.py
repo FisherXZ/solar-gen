@@ -11,21 +11,58 @@ import re
 
 from .models import EpcSource, NegativeEvidence
 
-
 # Known EPC contractors for candidate detection in scratchpad notes
 KNOWN_EPCS = [
-    "McCarthy Building", "Mortenson", "Blattner", "Signal Energy", "SOLV Energy",
-    "Primoris", "Rosendin", "Strata Solar", "RES", "Renewable Energy Systems",
-    "NextEra", "Invenergy", "Array Technologies", "GameChange Solar",
-    "Swinerton", "Burns McDonnell", "Burns & McDonnell", "Quanta Services",
-    "MasTec", "Tetra Tech", "Black & Veatch", "Bechtel", "Fluor",
-    "SunPower", "First Solar", "Canadian Solar", "JinkoSolar",
-    "LONGi", "Trina Solar", "BayWa", "Enel", "Acciona", "Iberdrola",
-    "EDF Renewables", "TotalEnergies", "bp", "Shell", "Clearway",
-    "AES", "Duke Energy Renewables", "Avangrid", "Orsted",
-    "Leeward Renewable Energy", "Lightsource bp", "Silicon Ranch",
-    "Cypress Creek Renewables", "Scout Clean Energy", "Savion",
-    "174 Power Global", "D.E. Shaw Renewable Investments",
+    "McCarthy Building",
+    "Mortenson",
+    "Blattner",
+    "Signal Energy",
+    "SOLV Energy",
+    "Primoris",
+    "Rosendin",
+    "Strata Solar",
+    "RES",
+    "Renewable Energy Systems",
+    "NextEra",
+    "Invenergy",
+    "Array Technologies",
+    "GameChange Solar",
+    "Swinerton",
+    "Burns McDonnell",
+    "Burns & McDonnell",
+    "Quanta Services",
+    "MasTec",
+    "Tetra Tech",
+    "Black & Veatch",
+    "Bechtel",
+    "Fluor",
+    "SunPower",
+    "First Solar",
+    "Canadian Solar",
+    "JinkoSolar",
+    "LONGi",
+    "Trina Solar",
+    "BayWa",
+    "Enel",
+    "Acciona",
+    "Iberdrola",
+    "EDF Renewables",
+    "TotalEnergies",
+    "bp",
+    "Shell",
+    "Clearway",
+    "AES",
+    "Duke Energy Renewables",
+    "Avangrid",
+    "Orsted",
+    "Leeward Renewable Energy",
+    "Lightsource bp",
+    "Silicon Ranch",
+    "Cypress Creek Renewables",
+    "Scout Clean Energy",
+    "Savion",
+    "174 Power Global",
+    "D.E. Shaw Renewable Investments",
 ]
 
 _ELIMINATION_RE = re.compile(
@@ -59,16 +96,10 @@ def synthesize_timeout_salvage(
         if e.get("tool") in {"web_search", "web_search_broad"}
     ]
 
-    sources_consulted = [
-        e["input"]["url"]
-        for e in agent_log
-        if e.get("tool") == "fetch_page"
-    ]
+    sources_consulted = [e["input"]["url"] for e in agent_log if e.get("tool") == "fetch_page"]
 
     scratchpad_notes = [
-        e["input"]["note"]
-        for e in agent_log
-        if e.get("tool") == "research_scratchpad"
+        e["input"]["note"] for e in agent_log if e.get("tool") == "research_scratchpad"
     ]
 
     # Detect candidate EPC names mentioned in scratchpad
@@ -90,9 +121,7 @@ def synthesize_timeout_salvage(
 
     # Determine recommended next action
     if obstacles and any(
-        "pre-financial" in o.lower()
-        or "early stage" in o.lower()
-        or "not announced" in o.lower()
+        "pre-financial" in o.lower() or "early stage" in o.lower() or "not announced" in o.lower()
         for o in obstacles
     ):
         next_action = "defer"
@@ -117,9 +146,7 @@ def synthesize_timeout_salvage(
     summary = " ".join(parts)
 
     # Supporting evidence: non-obstacle scratchpad notes
-    supporting_evidence = [
-        note[:500] for note in scratchpad_notes if not _OBSTACLE_RE.search(note)
-    ]
+    supporting_evidence = [note[:500] for note in scratchpad_notes if not _OBSTACLE_RE.search(note)]
 
     # Gaps: what was still missing
     gaps: list[str] = []

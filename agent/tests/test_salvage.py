@@ -1,8 +1,7 @@
 """Tests for the timeout salvage extraction module."""
 
-import pytest
+from src.models import NegativeEvidence
 from src.salvage import synthesize_timeout_salvage
-from src.models import EpcSource, NegativeEvidence
 
 
 def _make_log(*entries):
@@ -77,11 +76,17 @@ class TestCandidateDetection:
 
 class TestEntityElimination:
     def test_entity_elimination(self):
-        """Scratchpad says 'Ruled out McCarthy Building' -> in entities_eliminated AND candidates."""
+        """Ruled-out EPC appears in entities_eliminated AND candidates_considered."""
         log = _make_log(
             ("web_search", {"query": "McCarthy Building Indiana solar"}),
-            ("research_scratchpad", {"note": "Found McCarthy Building mentioned in Indiana permits"}),
-            ("research_scratchpad", {"note": "Ruled out McCarthy Building - no Indiana projects match"}),
+            (
+                "research_scratchpad",
+                {"note": "Found McCarthy Building mentioned in Indiana permits"},
+            ),
+            (
+                "research_scratchpad",
+                {"note": "Ruled out McCarthy Building - no Indiana projects match"},
+            ),
         )
         result = synthesize_timeout_salvage(log, SAMPLE_PROJECT, [])
         assert "McCarthy Building" in result["candidate_names_considered"]
@@ -159,8 +164,14 @@ class TestReturnsValidNegativeEvidence:
             ("web_search", {"query": "McCarthy Building Indiana solar projects"}),
             ("web_search", {"query": "Blattner Energy Indiana EPC"}),
             ("research_scratchpad", {"note": "Found McCarthy Building in search results"}),
-            ("research_scratchpad", {"note": "Ruled out McCarthy Building - wrong state, no evidence of Indiana work"}),
-            ("research_scratchpad", {"note": "Blattner mentioned but eliminated - not active in this region"}),
+            (
+                "research_scratchpad",
+                {"note": "Ruled out McCarthy Building - wrong state, no Indiana work"},
+            ),
+            (
+                "research_scratchpad",
+                {"note": "Blattner mentioned but eliminated - not active in region"},
+            ),
         )
         result = synthesize_timeout_salvage(log, SAMPLE_PROJECT, [])
         assert len(result["negative_evidence"]) > 0
