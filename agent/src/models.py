@@ -63,10 +63,10 @@ class ResearchError(BaseModel):
 
 
 class TriageResult(BaseModel):
-    action: str = "research"               # "research" | "skip"
+    action: str = "research"  # "research" | "skip"
     corrected_project: dict | None = None  # project dict with resolved name/developer
-    skip_reason: str | None = None         # machine-readable code
-    triage_log: list[dict] = []            # rules fired, tools called, findings
+    skip_reason: str | None = None  # machine-readable code
+    triage_log: list[dict] = []  # rules fired, tools called, findings
     tokens_used: int = 0
 
 
