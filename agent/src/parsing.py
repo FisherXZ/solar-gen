@@ -6,8 +6,44 @@ the report_findings tool input into an AgentResult.
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from .confidence import compute_confidence_upgrade
 from .models import AgentResult, EpcSource, NegativeEvidence, Reasoning
+
+# Domain-based reliability overrides — deterministic, not agent-guessed.
+# Government and first-party EPC sites get "high"; social media gets "low".
+_DOMAIN_RELIABILITY: dict[str, str] = {
+    # Government
+    "sec.gov": "high",
+    "osha.gov": "high",
+    "energy.gov": "high",
+    "eia.gov": "high",
+    # First-party EPC sites
+    "solvenergyus.com": "high",
+    "mortenson.com": "high",
+    "mccarthybuilding.com": "high",
+    "blattnerenergy.com": "high",
+    # Low reliability
+    "reddit.com": "low",
+    "quora.com": "low",
+    "facebook.com": "low",
+}
+
+
+def _get_domain_reliability(url: str | None) -> str | None:
+    """Return reliability override if URL domain is in the known list."""
+    if not url or url.startswith("search:"):
+        return None
+    try:
+        hostname = urlparse(url).hostname or ""
+    except Exception:
+        return None
+    hostname = hostname.lower().lstrip("www.")
+    for domain, reliability in _DOMAIN_RELIABILITY.items():
+        if hostname == domain or hostname.endswith("." + domain):
+            return reliability
+    return None
 
 
 def parse_report_findings(tool_input: dict) -> AgentResult:
@@ -33,18 +69,21 @@ def parse_report_findings(tool_input: dict) -> AgentResult:
             if not search_query:
                 url = None
 
-        sources.append(
-            EpcSource(
-                channel=s.get("channel", "web_search"),
-                publication=s.get("publication"),
-                date=s.get("date"),
-                url=url,
-                excerpt=s.get("excerpt", ""),
-                reliability=s.get("reliability", "medium"),
-                search_query=search_query,
-                source_method=s.get("source_method"),
-            )
+        source = EpcSource(
+            channel=s.get("channel", "web_search"),
+            publication=s.get("publication"),
+            date=s.get("date"),
+            url=url,
+            excerpt=s.get("excerpt", ""),
+            reliability=s.get("reliability", "medium"),
+            search_query=search_query,
+            source_method=s.get("source_method"),
         )
+        # Override reliability based on domain (deterministic > agent-guessed)
+        domain_rel = _get_domain_reliability(url)
+        if domain_rel:
+            source.reliability = domain_rel
+        sources.append(source)
 
     # Parse negative evidence
     negative_evidence: list[NegativeEvidence] = []

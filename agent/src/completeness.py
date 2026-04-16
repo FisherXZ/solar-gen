@@ -110,6 +110,7 @@ def evaluate_completeness(
         new_signals=new_signals,
         error_rate=error_rate,
         all_queries=all_queries,
+        agent_log=agent_log,
     )
 
     return {
@@ -137,6 +138,7 @@ def _build_recommendation(
     new_signals: bool,
     error_rate: float,
     all_queries: list[str],
+    agent_log: list[dict] | None = None,
 ) -> tuple[str, str | None]:
     """Build the recommendation and checkpoint message.
 
@@ -170,6 +172,7 @@ def _build_recommendation(
                 "Your recent searches haven't surfaced new EPC-specific information. "
                 "Consider switching to a different strategy — try Phase 2 (EPC portfolio sweep) "
                 "or Phase 3 (trade publications, Brave search) before reporting unknown."
+                + _build_search_hints(agent_log or [])
             )
 
         # Has gaps
@@ -179,6 +182,7 @@ def _build_recommendation(
             f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
             "Gaps detected:\n- " + "\n- ".join(gaps) + "\n"
             "Please address these gaps before reporting findings."
+            + _build_search_hints(agent_log or [])
         )
 
     # --- Iteration 12: Firm ---
@@ -205,6 +209,7 @@ def _build_recommendation(
             "new EPC-specific information. You SHOULD call report_findings now "
             "with your best assessment. An honest 'unknown' after a thorough search "
             "is the correct outcome. Do not continue searching without a new strategy."
+            + _build_search_hints(agent_log or [])
         )
 
     # --- Iteration 18: Mandatory ---
@@ -220,6 +225,60 @@ def _build_recommendation(
         )
 
     return "continue", None
+
+
+
+def _build_search_hints(agent_log: list[dict]) -> str:
+    """Build specific search suggestions based on what's missing from the log.
+
+    Scans the agent_log for tool calls and suggests tools/queries the agent
+    hasn't tried yet.
+    """
+    tools_used = set()
+    queries_lower: list[str] = []
+    for entry in agent_log:
+        tool = entry.get("tool")
+        if tool:
+            tools_used.add(tool)
+        query = entry.get("input", {}).get("query", "")
+        if query:
+            queries_lower.append(query.lower())
+
+    hints: list[str] = []
+
+    # OSHA check
+    if "search_osha" not in tools_used:
+        hints.append(
+            "Try: search_osha(employer_name='[candidate EPC]') "
+            "— OSHA records often reveal the actual construction contractor"
+        )
+
+    # SEC check
+    if "search_sec_edgar" not in tools_used:
+        hints.append(
+            "Try: search_sec_edgar(company_name='[developer]') "
+            "— SEC filings may disclose EPC contract awards"
+        )
+
+    # Portfolio sweep check
+    all_text = " ".join(queries_lower)
+    if "site:" not in all_text:
+        hints.append(
+            "Try: web_search('[candidate EPC] solar portfolio') "
+            "or site:mccarthybuilding.com, site:mortenson.com, etc."
+        )
+
+    # Brave search (broader coverage)
+    if "web_search_broad" not in tools_used:
+        hints.append(
+            "Try: web_search_broad('[project] EPC contractor') "
+            "— Brave search surfaces niche blogs and subcontractor pages"
+        )
+
+    if not hints:
+        return ""
+
+    return "\nSuggested next searches:\n- " + "\n- ".join(hints)
 
 
 def _is_portfolio_check(query: str) -> bool:

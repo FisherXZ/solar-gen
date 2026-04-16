@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT = 15.0  # seconds (raised from 10 for slow gov sites)
 _MAX_RETRIES = 2  # up to 3 total attempts
-_MAX_CHARS = 4000  # truncation limit
+_MAX_CHARS = 4000  # keyword extraction limit
+_HARD_TRUNCATE = 8000  # absolute max returned to agent
 _BLOCKED_CONTENT_TYPES = {"image/", "video/", "audio/", "application/zip"}
 _PDF_CONTENT_TYPE = "application/pdf"
 
@@ -158,6 +159,10 @@ async def execute(tool_input: dict) -> dict:
     if len(text) > _MAX_CHARS:
         text = _extract_relevant_sections(text)
 
+    # Hard truncation — even after keyword extraction, cap at 8000 chars
+    if len(text) > _HARD_TRUNCATE:
+        text = text[:_HARD_TRUNCATE] + "\n\n[... truncated to 8000 chars]"
+
     return {"url": url, "text": text, "length": len(text)}
 
 
@@ -179,6 +184,10 @@ def _handle_pdf(url: str, pdf_bytes: bytes) -> dict:
 
     if len(text) > _MAX_CHARS:
         text = _extract_relevant_sections(text)
+
+    # Hard truncation — cap at 8000 chars
+    if len(text) > _HARD_TRUNCATE:
+        text = text[:_HARD_TRUNCATE] + "\n\n[... truncated to 8000 chars]"
 
     return {
         "url": url,

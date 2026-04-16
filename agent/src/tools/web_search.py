@@ -17,6 +17,9 @@ _MAX_RETRIES = 2
 _cache: dict[tuple[str, int], tuple[float, list[dict]]] = {}
 _CACHE_TTL = 3600  # 1 hour
 
+# Session-level URL dedup — filter out URLs already returned this session
+_seen_urls: set[str] = set()
+
 DEFINITION = {
     "name": "web_search",
     "description": (
@@ -86,10 +89,18 @@ async def execute(tool_input: dict) -> dict:
         for r in response.get("results", [])
     ]
 
-    # Cache
+    # Dedup: filter out URLs already seen this session
+    new_results = [r for r in results if r["url"] not in _seen_urls]
+    _seen_urls.update(r["url"] for r in results if r["url"])
+    duped = len(results) - len(new_results)
+
+    # Cache (full results, not deduped — dedup is session-level)
     _cache[cache_key] = (now, results)
 
-    return {"results": results}
+    result = {"results": new_results}
+    if duped:
+        result["deduped"] = duped
+    return result
 
 
 @tenacity.retry(
