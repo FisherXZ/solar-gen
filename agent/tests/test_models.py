@@ -107,8 +107,7 @@ class TestAgentResult:
         assert r.confidence == "unknown"
         assert r.sources == []
         assert r.reasoning == ""
-        assert r.related_leads == []
-        assert r.searches_performed == []
+        assert r.negative_evidence == []
 
     def test_full(self):
         src = EpcSource(channel="web_search", excerpt="found it")
@@ -117,8 +116,6 @@ class TestAgentResult:
             confidence="confirmed",
             sources=[src],
             reasoning="Two independent sources",
-            related_leads=[{"developer": "X", "epc": "Y"}],
-            searches_performed=["query 1", "query 2"],
         )
         assert r.epc_contractor == "Blattner Energy"
         assert len(r.sources) == 1

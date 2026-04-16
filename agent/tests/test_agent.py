@@ -39,7 +39,7 @@ class TestReportFindings:
                     }
                 ],
                 "reasoning": "Two sources confirm.",
-                "searches_performed": ["query 1"],
+
                 "related_findings": [],
             },
         )
@@ -77,7 +77,7 @@ class TestReportFindings:
                 "epc_contractor": None,
                 "confidence": "unknown",
                 "reasoning": "No evidence found.",
-                "searches_performed": ["dead end query"],
+
             },
         )
         resp = make_claude_response(
@@ -139,7 +139,7 @@ class TestMultiTurn:
                 "confidence": "likely",
                 "sources": [{"channel": "news_article", "excerpt": "Blattner"}],
                 "reasoning": "Found news article.",
-                "searches_performed": ["SunDev Sunrise Solar EPC contractor"],
+
             },
         )
         turn2 = make_claude_response(
@@ -224,8 +224,9 @@ class TestMaxIterations:
 
         result, log, tokens = await run_research(sample_project)
 
-        assert isinstance(result.reasoning, dict)
-        assert "summary" in result.reasoning
+        from src.models import Reasoning
+        assert isinstance(result.reasoning, Reasoning)
+        assert result.reasoning.summary != ""
         assert result.error is not None
         assert result.error.category == "max_iterations_salvaged"
         assert mock_client.messages.create.call_count == 2
@@ -348,7 +349,7 @@ class TestSearchErrors:
             input_data={
                 "confidence": "unknown",
                 "reasoning": "Search failed.",
-                "searches_performed": ["bad query"],
+
             },
         )
         turn2 = make_claude_response(
@@ -393,7 +394,7 @@ class TestTokenCounting:
         report_block = make_tool_use_block(
             name="report_findings",
             block_id="rf-t",
-            input_data={"confidence": "unknown", "reasoning": "x", "searches_performed": ["q"]},
+            input_data={"confidence": "unknown", "reasoning": "x"},
         )
         turn2 = make_claude_response(
             stop_reason="tool_use",
@@ -441,7 +442,7 @@ class TestTenacityRetry:
                 "epc_contractor": "Blattner",
                 "confidence": "likely",
                 "reasoning": "Found after retry.",
-                "searches_performed": ["q"],
+
                 "sources": [],
             },
         )

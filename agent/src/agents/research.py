@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..config import RUNTIME_MAX_ITERATIONS, RUNTIME_MIN_STAGNATION_ITERATIONS
 from ..hooks import DiscoveryHook, ToolHealthHook
 from ..prompts import RESEARCH_SYSTEM_PROMPT
 from ..runtime import AgentRuntime, EscalationPolicy
@@ -40,7 +41,9 @@ def build_research_runtime(
         hooks=[DiscoveryHook(), ToolHealthHook()],
         compactor=HeuristicCompactor(max_tokens=60_000, preserve_recent=4),
         escalation=EscalationPolicy(
-            max_iterations=30, escalation_mode="autonomous", min_iterations_before_stagnation=6
+            max_iterations=RUNTIME_MAX_ITERATIONS,
+            escalation_mode="autonomous",
+            min_iterations_before_stagnation=RUNTIME_MIN_STAGNATION_ITERATIONS,
         ),
         api_key=api_key,
         model=model,

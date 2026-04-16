@@ -103,16 +103,20 @@ def store_discovery(
     """
     reject_pending_discovery(project_id)
 
+    # Serialize reasoning: Reasoning model -> dict -> JSON, str stays as str
+    if hasattr(result.reasoning, "model_dump"):
+        reasoning_serialized = json.dumps(result.reasoning.model_dump())
+    elif isinstance(result.reasoning, dict):
+        reasoning_serialized = json.dumps(result.reasoning)
+    else:
+        reasoning_serialized = result.reasoning
+
     discovery_data = {
         "project_id": project_id,
         "epc_contractor": result.epc_contractor or "Unknown",
         "confidence": result.confidence,
         "sources": [s.model_dump() for s in result.sources],
-        "reasoning": json.dumps(result.reasoning)
-        if isinstance(result.reasoning, dict)
-        else result.reasoning,
-        "related_leads": result.related_leads,
-        "searches_performed": result.searches_performed,
+        "reasoning": reasoning_serialized,
         "review_status": "pending",
         "agent_log": agent_log,
         "tokens_used": total_tokens,

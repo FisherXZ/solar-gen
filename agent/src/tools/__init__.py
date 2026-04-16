@@ -129,8 +129,14 @@ def get_all_tools() -> list[dict]:
 def get_tools(names: list[str]) -> list[dict]:
     """Return specific tool definitions by name.
 
-    Raises KeyError if a name is not found.
+    Raises ValueError if any name is not found in the registry.
     """
+    missing = [n for n in names if n not in _REGISTRY]
+    if missing:
+        raise ValueError(
+            f"Unknown tool(s): {missing}. "
+            f"Available: {sorted(_REGISTRY.keys())}"
+        )
     return [_REGISTRY[n].DEFINITION for n in names]
 
 

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import re
 
+from .config import COMPLETENESS_CHECKPOINTS as CHECKPOINTS, MAX_ITERATIONS
+
 # Top 10 EPC domains for portfolio check detection
 _EPC_DOMAINS = {
     "mccarthybuilding.com",
@@ -28,12 +30,7 @@ _EPC_DOMAINS = {
     "maborenewables.com",
 }
 
-# Checkpoint iterations and their escalation level
-CHECKPOINTS: dict[int, str] = {
-    6: "gentle",
-    12: "firm",
-    18: "mandatory",
-}
+# CHECKPOINTS and MAX_ITERATIONS imported from config
 
 
 def evaluate_completeness(
@@ -167,7 +164,7 @@ def _build_recommendation(
 
         if not gaps and not new_signals:
             return "switch_strategy", (
-                f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {25}):\n"
+                f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {MAX_ITERATIONS}):\n"
                 f"Searches: {search_count} | Pages read: {fetch_count} | "
                 f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
                 "Your recent searches haven't surfaced new EPC-specific information. "
@@ -177,7 +174,7 @@ def _build_recommendation(
 
         # Has gaps
         return "switch_strategy", (
-            f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {25}):\n"
+            f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {MAX_ITERATIONS}):\n"
             f"Searches: {search_count} | Pages read: {fetch_count} | "
             f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
             "Gaps detected:\n- " + "\n- ".join(gaps) + "\n"
@@ -189,17 +186,19 @@ def _build_recommendation(
         if new_signals:
             # Still finding new info — let it continue but note the checkpoint
             return "continue", (
-                f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {25}):\n"
+                f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {MAX_ITERATIONS}):\n"
                 f"Searches: {search_count} | Pages read: {fetch_count} | "
                 f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
                 "You are still finding new information. You may continue, but "
                 "you SHOULD call report_findings soon with your best assessment. "
-                "You have used {:.0f}% of your iteration budget.".format((iteration + 1) / 25 * 100)
+                "You have used {:.0f}% of your iteration budget.".format(
+                    (iteration + 1) / MAX_ITERATIONS * 100
+                )
             )
 
         # No new signals — firm wrap-up
         return "wrap_up", (
-            f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {25}):\n"
+            f"\n\nRESEARCH CHECKPOINT (iteration {iteration + 1} of {MAX_ITERATIONS}):\n"
             f"Searches: {search_count} | Pages read: {fetch_count} | "
             f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
             "Diminishing returns detected — your recent searches have not surfaced "
@@ -211,7 +210,7 @@ def _build_recommendation(
     # --- Iteration 18: Mandatory ---
     if level == "mandatory":
         return "wrap_up", (
-            f"\n\nRESEARCH CHECKPOINT — MANDATORY WRAP-UP (iteration {iteration + 1} of {25}):\n"
+            f"\n\nRESEARCH CHECKPOINT — MANDATORY WRAP-UP (iteration {iteration + 1} of {MAX_ITERATIONS}):\n"
             f"Searches: {search_count} | Pages read: {fetch_count} | "
             f"Portfolio checks: {portfolio_checks} | KB consulted: {kb_consulted}\n"
             "You have used 76% of your iteration budget. You MUST call report_findings "

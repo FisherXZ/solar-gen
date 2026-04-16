@@ -70,16 +70,20 @@ class TriageResult(BaseModel):
     tokens_used: int = 0
 
 
+class Reasoning(BaseModel):
+    """Typed reasoning output from research agent."""
+    summary: str = ""
+    supporting_evidence: list[str] = []
+    gaps: list[str] = []
+
+
 class AgentResult(BaseModel):
     epc_contractor: str | None = None
     confidence: str = "unknown"  # confirmed / likely / possible / unknown
-    agent_confidence: str | None = None  # raw agent-reported confidence before upgrade
     source_count: int = 0  # number of independent sources
     confidence_warning: str | None = None  # e.g. "Unverified — single low-reliability source"
     sources: list[EpcSource] = []
-    reasoning: str | dict = ""
-    related_leads: list[dict] = []
-    searches_performed: list[str] = []
+    reasoning: Reasoning | str = ""
     negative_evidence: list[NegativeEvidence] = []
     error: ResearchError | None = None
 
@@ -207,8 +211,7 @@ class EpcDiscoveryResponse(BaseModel):
     epc_contractor: str
     confidence: str
     sources: list[dict]
-    reasoning: str | dict | None
-    related_leads: list[dict]
+    reasoning: Reasoning | str | None = None
     review_status: str
     tokens_used: int
     created_at: str

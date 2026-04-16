@@ -47,8 +47,7 @@ class TestBasicParsing:
         assert result.sources[0].url == "https://example.com/article"
         assert result.sources[0].source_method == "web_search"
         assert result.reasoning == "Found in trade publication."
-        assert result.searches_performed == ["Blattner Sunrise Solar EPC"]
-        assert result.related_leads == [{"developer": "DevCo", "epc_contractor": "X"}]
+        assert result.reasoning == "Found in trade publication."
 
 
 class TestUrlFallback:
@@ -178,4 +177,4 @@ class TestConfidenceUpgradeCalled:
         assert len(args[0][0]) == 2  # 2 sources passed
         assert args[0][1] == "likely"  # raw confidence passed
         assert result.confidence == "confirmed"
-        assert result.agent_confidence == "likely"
+        assert result.confidence == "confirmed"  # upgraded

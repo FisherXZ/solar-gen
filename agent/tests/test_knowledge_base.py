@@ -259,7 +259,7 @@ def test_process_discovery_not_found(mock_get_client, mock_resolve):
     mock_get_client.return_value.table.return_value = table
 
     result = make_agent_result(
-        epc_contractor=None, confidence="unknown", sources=[], searches_performed=["test query"]
+        epc_contractor=None, confidence="unknown", sources=[]
     )
     project = {"id": "proj-001", "developer": "SunDev LLC", "state": "TX"}
 

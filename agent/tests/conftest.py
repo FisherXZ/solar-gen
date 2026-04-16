@@ -135,8 +135,6 @@ def make_agent_result(**overrides):
             )
         ],
         "reasoning": "Found in trade publication.",
-        "related_leads": [],
-        "searches_performed": ["SunDev Sunrise Solar EPC"],
     }
     defaults.update(overrides)
     return AgentResult(**defaults)

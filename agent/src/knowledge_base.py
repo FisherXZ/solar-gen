@@ -309,9 +309,11 @@ def process_discovery_into_kb(
         if result.epc_contractor and result.epc_contractor != "Unknown"
         else None,
         "confidence": result.confidence,
-        "searches_performed": result.searches_performed,
-        "reasoning": result.reasoning,
-        "related_findings": result.related_leads,
+        "searches_performed": [],  # Moved out of AgentResult; stored in epc_discoveries
+        "reasoning": result.reasoning if isinstance(result.reasoning, str) else (
+            result.reasoning.model_dump() if hasattr(result.reasoning, "model_dump") else ""
+        ),
+        "related_findings": [],  # Moved out of AgentResult
         "negative_evidence": negative_evidence_data,
         "tokens_used": 0,  # filled by caller if needed
     }
@@ -372,12 +374,7 @@ def promote_discovery_to_kb(
         except Exception as e:
             logger.error("Failed to create EPC engagement: %s", e)
 
-    # Process related_leads into additional engagements
-    for lead in result.related_leads:
-        try:
-            _process_related_lead(client, lead, state)
-        except Exception as e:
-            logger.warning("Failed to process related lead: %s", e)
+    # related_leads removed from AgentResult; related engagements handled via agent_log
 
     # Mark developer profile as stale (engagements changed)
     if dev_entity:

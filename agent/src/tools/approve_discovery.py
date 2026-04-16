@@ -83,8 +83,6 @@ async def execute(tool_input: dict) -> dict:
                     confidence=discovery.get("confidence", "unknown"),
                     sources=sources,
                     reasoning=discovery.get("reasoning", ""),
-                    related_leads=discovery.get("related_leads", []),
-                    searches_performed=discovery.get("searches_performed", []),
                 )
                 promote_discovery_to_kb(discovery["project_id"], result, project)
             except Exception:

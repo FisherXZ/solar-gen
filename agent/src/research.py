@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from uuid import uuid4
 
 import anthropic
@@ -24,18 +23,20 @@ from tenacity import (
     wait_exponential,
 )
 
-from .completeness import CHECKPOINTS, evaluate_completeness
-from .models import AgentResult, ResearchError
+from .completeness import evaluate_completeness
+from .config import (
+    COMPLETENESS_CHECKPOINTS as CHECKPOINTS,
+    HARD_STOP_ITERATION,
+    MAX_ITERATIONS,
+    MAX_PLANNING_ITERATIONS,
+    RESEARCH_MODEL as MODEL,
+)
+from .models import AgentResult, Reasoning, ResearchError
 from .parsing import parse_report_findings
 from .prompts import PLANNING_SYSTEM_PROMPT, RESEARCH_SYSTEM_PROMPT, build_user_message
 from .salvage import synthesize_timeout_salvage
 from .tools import check_tool_health, execute_tool, get_tools
 from .triage import triage_project
-
-MODEL = os.environ.get("RESEARCH_MODEL", "claude-sonnet-4-6")
-MAX_ITERATIONS = 25
-# At this iteration, strip all tools except report_findings to force conclusion
-HARD_STOP_ITERATION = 22
 
 # Tools available during standalone research
 RESEARCH_TOOLS = [
@@ -66,8 +67,6 @@ PLANNING_TOOLS = [
     "notify_progress",
     "report_findings",
 ]
-MAX_PLANNING_ITERATIONS = 5
-
 logger = logging.getLogger(__name__)
 
 
@@ -356,15 +355,14 @@ async def run_research(
     salvage = synthesize_timeout_salvage(agent_log, project, recent_tool_outputs)
     return (
         AgentResult(
-            reasoning={
-                "summary": salvage["summary"],
-                "supporting_evidence": salvage["supporting_evidence"],
-                "gaps": salvage["gaps"],
-            },
+            reasoning=Reasoning(
+                summary=salvage["summary"],
+                supporting_evidence=salvage["supporting_evidence"],
+                gaps=salvage["gaps"],
+            ),
             confidence="unknown",
             epc_contractor=None,
             sources=salvage["sources"],
-            searches_performed=salvage["queries_tried"],
             negative_evidence=salvage["negative_evidence"],
             error=ResearchError(
                 category="max_iterations_salvaged",

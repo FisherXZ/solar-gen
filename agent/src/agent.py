@@ -79,18 +79,13 @@ TOOLS = [
                     "type": "string",
                     "description": "Explanation of how you arrived at this conclusion.",
                 },
-                "searches_performed": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of all searches executed, including dead ends.",
-                },
                 "related_findings": {
                     "type": "array",
                     "items": {"type": "object"},
                     "description": "Other developer→EPC relationships discovered during research.",
                 },
             },
-            "required": ["confidence", "reasoning", "searches_performed"],
+            "required": ["confidence", "reasoning"],
         },
     },
 ]
@@ -205,8 +200,6 @@ async def run_agent_async(
                     confidence=inp.get("confidence", "unknown"),
                     sources=sources,
                     reasoning=inp.get("reasoning", ""),
-                    related_leads=inp.get("related_findings", []),
-                    searches_performed=inp.get("searches_performed", []),
                 )
                 # Acknowledge the tool call so the conversation is well-formed
                 tool_results.append(

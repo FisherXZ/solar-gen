@@ -7,7 +7,7 @@ the report_findings tool input into an AgentResult.
 from __future__ import annotations
 
 from .confidence import compute_confidence_upgrade
-from .models import AgentResult, EpcSource, NegativeEvidence
+from .models import AgentResult, EpcSource, NegativeEvidence, Reasoning
 
 
 def parse_report_findings(tool_input: dict) -> AgentResult:
@@ -57,6 +57,17 @@ def parse_report_findings(tool_input: dict) -> AgentResult:
             )
         )
 
+    # Build typed Reasoning (accept dict or string from tool input)
+    raw_reasoning = tool_input.get("reasoning", "")
+    if isinstance(raw_reasoning, dict):
+        reasoning: Reasoning | str = Reasoning(
+            summary=raw_reasoning.get("summary", ""),
+            supporting_evidence=raw_reasoning.get("supporting_evidence", []),
+            gaps=raw_reasoning.get("gaps", []),
+        )
+    else:
+        reasoning = raw_reasoning
+
     # Compute confidence upgrade
     raw_confidence = tool_input.get("confidence", "unknown")
     final_confidence, independent_count, warning = compute_confidence_upgrade(
@@ -66,12 +77,9 @@ def parse_report_findings(tool_input: dict) -> AgentResult:
     return AgentResult(
         epc_contractor=tool_input.get("epc_contractor"),
         confidence=final_confidence,
-        agent_confidence=raw_confidence,
         source_count=independent_count,
         confidence_warning=warning,
         sources=sources,
-        reasoning=tool_input.get("reasoning", ""),
-        related_leads=tool_input.get("related_findings", []),
-        searches_performed=searches_performed,
+        reasoning=reasoning,
         negative_evidence=negative_evidence,
     )

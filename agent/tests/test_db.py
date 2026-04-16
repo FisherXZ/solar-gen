@@ -72,8 +72,7 @@ class TestStoreDiscovery:
             confidence="confirmed",
             sources=[EpcSource(channel="trade_publication", excerpt="Blattner awarded contract")],
             reasoning="Two independent sources confirm.",
-            related_leads=[],
-            searches_performed=["query 1"],
+
         )
         agent_log = [{"iteration": 0, "stop_reason": "tool_use"}]
         tokens = 3000
@@ -105,7 +104,7 @@ class TestStoreDiscovery:
             epc_contractor=None,
             confidence="unknown",
             reasoning="Nothing found.",
-            searches_performed=["dead end"],
+
         )
         mock_insert.return_value = {"id": "disc-x"}
 
@@ -128,7 +127,7 @@ class TestStoreDiscovery:
             epc_contractor="SomeCo",
             confidence="possible",
             reasoning="Weak signal.",
-            searches_performed=["query"],
+
         )
         mock_insert.return_value = {"id": "disc-y"}
 

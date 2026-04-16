@@ -7,6 +7,7 @@ import logging
 import traceback
 from collections.abc import Awaitable, Callable
 
+from .config import DEFAULT_BATCH_CONCURRENCY
 from .db import get_active_discovery, sanitize_key_from_string, store_discovery
 from .knowledge_base import build_knowledge_context
 from .research import run_research
@@ -94,7 +95,7 @@ async def _research_one(
 async def run_batch(
     projects: list[dict],
     on_progress: Callable[[dict], Awaitable[None]],
-    concurrency: int = 10,
+    concurrency: int = DEFAULT_BATCH_CONCURRENCY,
     cancel_event: asyncio.Event | None = None,
     api_key: str | None = None,
 ) -> list[dict]:
@@ -103,7 +104,7 @@ async def run_batch(
     Args:
         projects: List of project dicts from DB.
         on_progress: Async callback called for each status update.
-        concurrency: Max concurrent agent runs (default 10).
+        concurrency: Max concurrent agent runs.
         cancel_event: When set, pending tasks skip instead of starting.
         api_key: Optional user-provided Anthropic API key.
 

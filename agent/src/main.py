@@ -415,8 +415,6 @@ async def review_discovery(
                     confidence=discovery.get("confidence", "unknown"),
                     sources=sources,
                     reasoning=_parse_reasoning(discovery.get("reasoning", "")),
-                    related_leads=discovery.get("related_leads", []),
-                    searches_performed=discovery.get("searches_performed", []),
                     negative_evidence=neg_evidence,
                 )
                 promote_discovery_to_kb(discovery["project_id"], result, project)
