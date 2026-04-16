@@ -42,7 +42,7 @@ async def execute(tool_input: dict) -> dict:
         return {"error": f"Project {project_id} not found"}
 
     kb_context = build_knowledge_context(project)
-    runtime = build_research_runtime(project=project, api_key=api_key)
+    runtime, _completeness_hook = build_research_runtime(project=project, api_key=api_key)
 
     user_msg = build_user_message(project, kb_context)
     if focus:

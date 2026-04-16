@@ -7,12 +7,44 @@ import logging
 import traceback
 from collections.abc import Awaitable, Callable
 
+from .agents.research import build_research_runtime
 from .config import DEFAULT_BATCH_CONCURRENCY
 from .db import get_active_discovery, sanitize_key_from_string, store_discovery
 from .knowledge_base import build_knowledge_context
-from .research import run_research
+from .models import AgentResult, Reasoning, ResearchError
+from .parsing import parse_report_findings
+from .prompts import build_user_message
+from .salvage import synthesize_timeout_salvage
+from .triage import triage_project
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_agent_result(messages: list[dict]) -> AgentResult | None:
+    """Extract AgentResult from runtime messages by finding report_findings call.
+
+    Scans messages for a tool_use block calling report_findings and parses
+    its input into an AgentResult. Returns None if report_findings was never
+    called.
+    """
+    for msg in reversed(messages):
+        if msg.get("role") != "assistant":
+            continue
+        content = msg.get("content", [])
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            # Handle both dict blocks and Anthropic SDK objects
+            if isinstance(block, dict):
+                if block.get("type") == "tool_use" and block.get("name") == "report_findings":
+                    return parse_report_findings(block.get("input", {}))
+            elif (
+                getattr(block, "type", None) == "tool_use"
+                and getattr(block, "name", None) == "report_findings"
+            ):
+                tool_input = block.input if isinstance(block.input, dict) else {}
+                return parse_report_findings(tool_input)
+    return None
 
 
 async def _research_one(
@@ -63,16 +95,83 @@ async def _research_one(
         )
 
         try:
-            knowledge_context = build_knowledge_context(project)
-            agent_result, agent_log, total_tokens = await run_research(
-                project, knowledge_context, api_key=api_key
+            # Triage: classify project before research
+            triage = await triage_project(project, api_key)
+            if triage.action == "skip":
+                agent_result = AgentResult(
+                    reasoning=f"Skipped by triage: {triage.skip_reason}",
+                    error=ResearchError(
+                        category="triaged_skip",
+                        message=f"Triage skipped: {triage.skip_reason}",
+                    ),
+                )
+                discovery = store_discovery(
+                    project_id,
+                    agent_result,
+                    triage.triage_log,
+                    triage.tokens_used,
+                    project=project,
+                )
+                result = {
+                    "project_id": project_id,
+                    "project_name": project_label,
+                    "status": "completed",
+                    "discovery": discovery,
+                }
+                await on_progress(result)
+                return result
+
+            effective_project = triage.corrected_project or project
+
+            # Build runtime and run research
+            knowledge_context = build_knowledge_context(effective_project)
+            runtime, completeness_hook = build_research_runtime(
+                project=effective_project, api_key=api_key
             )
+
+            user_msg = build_user_message(effective_project, knowledge_context)
+            messages = [{"role": "user", "content": user_msg}]
+
+            turn_result = await runtime.run_turn(
+                messages=messages,
+                on_event=lambda e: None,
+            )
+
+            # Extract AgentResult from report_findings call in messages
+            agent_result = _extract_agent_result(turn_result.messages)
+            total_tokens = (
+                turn_result.usage.get("input_tokens", 0)
+                + turn_result.usage.get("output_tokens", 0)
+            )
+            agent_log = completeness_hook.agent_log
+
+            if agent_result is None:
+                # No report_findings called — synthesize salvage
+                salvage = synthesize_timeout_salvage(
+                    agent_log, effective_project, completeness_hook.recent_tool_outputs
+                )
+                agent_result = AgentResult(
+                    reasoning=Reasoning(
+                        summary=salvage["summary"],
+                        supporting_evidence=salvage["supporting_evidence"],
+                        gaps=salvage["gaps"],
+                    ),
+                    confidence="unknown",
+                    epc_contractor=None,
+                    sources=salvage["sources"],
+                    negative_evidence=salvage["negative_evidence"],
+                    error=ResearchError(
+                        category="max_iterations_salvaged",
+                        message="Hit iteration cap; salvaged structured negative evidence.",
+                    ),
+                )
+
             discovery = store_discovery(
                 project_id,
                 agent_result,
                 agent_log,
                 total_tokens,
-                project=project,
+                project=effective_project,
             )
             result = {
                 "project_id": project_id,

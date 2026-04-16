@@ -23,8 +23,12 @@ async def test_execute_calls_runtime():
             iterations=5,
         )
     )
+    mock_hook = MagicMock()
     with (
-        patch("src.agents.research.build_research_runtime", return_value=mock_rt),
+        patch(
+            "src.agents.research.build_research_runtime",
+            return_value=(mock_rt, mock_hook),
+        ),
         patch("src.db.get_project", return_value={"id": 42, "project_name": "Test Solar"}),
         patch("src.knowledge_base.build_knowledge_context", return_value=""),
         patch("src.prompts.build_user_message", return_value="Research this"),

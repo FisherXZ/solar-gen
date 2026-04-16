@@ -29,8 +29,9 @@ from .agent_jobs import (
     set_task,
 )
 from .agents import build_chat_runtime
+from .agents.research import build_research_runtime
 from .auth import get_user_id, require_admin
-from .batch import run_batch
+from .batch import _extract_agent_result, run_batch
 from .batch_progress import cancel_batch, cancel_batch_for_conversation, get_batch
 from .knowledge_base import (
     build_knowledge_context,
@@ -52,10 +53,15 @@ from .models import (
     HubSpotConnectRequest,
     HubSpotPushRequest,
     NegativeEvidence,
+    Reasoning,
+    ResearchError,
     ReviewRequest,
 )
-from .research import run_research, run_research_plan
+from .prompts import build_user_message
+from .research import run_research_plan
+from .salvage import synthesize_timeout_salvage
 from .sse import StreamWriter
+from .triage import triage_project
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +157,8 @@ async def discover(req: DiscoverRequest, request: Request, _user_id: str = Depen
     """Run EPC discovery for a project.
 
     Optionally accepts an approved plan from /api/discover/plan.
+    Uses AgentRuntime via build_research_runtime() for hooks, compaction,
+    and escalation support.
     """
     api_key = request.headers.get("x-anthropic-api-key")
     project = db.get_project(req.project_id)
@@ -165,12 +173,66 @@ async def discover(req: DiscoverRequest, request: Request, _user_id: str = Depen
             detail="Project already has an accepted EPC discovery",
         )
 
-    # Run the research agent
+    # Run the research agent via AgentRuntime
     try:
-        knowledge_context = build_knowledge_context(project)
-        result, agent_log, total_tokens = await run_research(
-            project, knowledge_context, approved_plan=req.plan, api_key=api_key
+        # Triage: classify project before research
+        triage = await triage_project(project, api_key)
+        if triage.action == "skip":
+            result = AgentResult(
+                reasoning=f"Skipped by triage: {triage.skip_reason}",
+                error=ResearchError(
+                    category="triaged_skip",
+                    message=f"Triage skipped: {triage.skip_reason}",
+                ),
+            )
+            discovery = db.store_discovery(
+                req.project_id, result, triage.triage_log, triage.tokens_used, project=project
+            )
+            discovery["handoff_available"] = True
+            return discovery
+
+        effective_project = triage.corrected_project or project
+
+        knowledge_context = build_knowledge_context(effective_project)
+        runtime, completeness_hook = build_research_runtime(
+            project=effective_project, api_key=api_key
         )
+
+        user_msg = build_user_message(effective_project, knowledge_context)
+        if req.plan:
+            user_msg += f"\n\n## Approved Research Plan\n{req.plan}\nExecute this plan now."
+        messages = [{"role": "user", "content": user_msg}]
+
+        turn_result = await runtime.run_turn(messages=messages, on_event=lambda e: None)
+
+        # Extract AgentResult from report_findings call
+        result = _extract_agent_result(turn_result.messages)
+        total_tokens = (
+            turn_result.usage.get("input_tokens", 0) + turn_result.usage.get("output_tokens", 0)
+        )
+        agent_log = completeness_hook.agent_log
+
+        if result is None:
+            # No report_findings — synthesize salvage from what was gathered
+            salvage = synthesize_timeout_salvage(
+                agent_log, effective_project, completeness_hook.recent_tool_outputs
+            )
+            result = AgentResult(
+                reasoning=Reasoning(
+                    summary=salvage["summary"],
+                    supporting_evidence=salvage["supporting_evidence"],
+                    gaps=salvage["gaps"],
+                ),
+                confidence="unknown",
+                epc_contractor=None,
+                sources=salvage["sources"],
+                negative_evidence=salvage["negative_evidence"],
+                error=ResearchError(
+                    category="max_iterations_salvaged",
+                    message="Hit iteration cap; salvaged structured negative evidence.",
+                ),
+            )
+
     except KeyError as exc:
         raise HTTPException(
             status_code=503,
@@ -197,13 +259,12 @@ async def discover(req: DiscoverRequest, request: Request, _user_id: str = Depen
             )
 
     # Store discovery for successful results or partial failures worth saving
-    # (max_iterations, no_report, search_tool_error still have useful partial data)
     discovery = db.store_discovery(
         req.project_id,
         result,
         agent_log,
         total_tokens,
-        project=project,
+        project=effective_project,
     )
 
     # Include error info in response if present (partial success)

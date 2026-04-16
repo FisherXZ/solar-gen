@@ -73,29 +73,60 @@ class TestHealth:
 
 class TestDiscover:
     @patch("src.main.db.store_discovery")
-    @patch("src.main.run_research", new_callable=AsyncMock)
+    @patch("src.main.build_research_runtime")
+    @patch("src.main.build_user_message", return_value="Research this project")
     @patch("src.main.build_knowledge_context")
+    @patch("src.main.triage_project", new_callable=AsyncMock)
     @patch("src.main.db.get_active_discovery")
     @patch("src.main.db.get_project")
     async def test_success(
         self,
         mock_get_proj,
         mock_get_active,
+        mock_triage,
         mock_kb,
-        mock_research,
+        mock_msg,
+        mock_build_rt,
         mock_store,
         client,
         sample_project,
         sample_discovery,
     ):
+        from src.models import TriageResult
+
         mock_get_proj.return_value = sample_project
         mock_get_active.return_value = None
+        mock_triage.return_value = TriageResult(action="research", triage_log=[], tokens_used=0)
         mock_kb.return_value = None
-        mock_research.return_value = (
-            AgentResult(epc_contractor="McCarthy", confidence="likely", reasoning="ok"),
-            [{"iteration": 0}],
-            3000,
-        )
+
+        # Build mock runtime that returns report_findings in messages
+        mock_hook = MagicMock()
+        mock_hook.agent_log = [{"iteration": 0}]
+        mock_hook.recent_tool_outputs = []
+        mock_turn_result = MagicMock()
+        mock_turn_result.messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "report_findings",
+                        "id": "tool-1",
+                        "input": {
+                            "epc_contractor": "McCarthy",
+                            "confidence": "likely",
+                            "reasoning": "ok",
+                            "sources": [],
+                            "searches_performed": [],
+                        },
+                    }
+                ],
+            }
+        ]
+        mock_turn_result.usage = {"input_tokens": 2000, "output_tokens": 1000}
+        mock_runtime = MagicMock()
+        mock_runtime.run_turn = AsyncMock(return_value=mock_turn_result)
+        mock_build_rt.return_value = (mock_runtime, mock_hook)
         mock_store.return_value = sample_discovery
 
         resp = await client.post("/api/discover", json={"project_id": "proj-001"})
@@ -122,17 +153,26 @@ class TestDiscover:
         resp = await client.post("/api/discover", json={"project_id": "proj-001"})
         assert resp.status_code == 409
 
-    @patch("src.main.run_research", new_callable=AsyncMock)
+    @patch("src.main.build_research_runtime")
+    @patch("src.main.build_user_message", return_value="Research this project")
     @patch("src.main.build_knowledge_context")
+    @patch("src.main.triage_project", new_callable=AsyncMock)
     @patch("src.main.db.get_active_discovery")
     @patch("src.main.db.get_project")
     async def test_500_agent_error(
-        self, mock_get_proj, mock_get_active, mock_kb, mock_research, client, sample_project
+        self, mock_get_proj, mock_get_active, mock_triage, mock_kb, mock_msg,
+        mock_build_rt, client, sample_project
     ):
+        from src.models import TriageResult
+
         mock_get_proj.return_value = sample_project
         mock_get_active.return_value = None
+        mock_triage.return_value = TriageResult(action="research", triage_log=[], tokens_used=0)
         mock_kb.return_value = None
-        mock_research.side_effect = RuntimeError("Agent crashed")
+        mock_rt = MagicMock()
+        mock_rt.run_turn = AsyncMock(side_effect=RuntimeError("Agent crashed"))
+        mock_hook = MagicMock()
+        mock_build_rt.return_value = (mock_rt, mock_hook)
 
         resp = await client.post("/api/discover", json={"project_id": "proj-001"})
         assert resp.status_code == 500
