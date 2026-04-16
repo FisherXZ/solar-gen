@@ -8,7 +8,7 @@ This is NOT a separate agent — it uses the same shared tools as the chat
 agent, but with a focused research-only system prompt and no conversation
 context. Think of it as "chat agent in research mode, headless."
 
-The research loop itself lives in research_loop.py (gap-driven v2 loop).
+The research loop itself lives in v3/orchestrator.py (procedural v3 loop).
 This module exposes the public run_research() API plus the planning-only
 run_research_plan() variant.
 """
@@ -29,8 +29,26 @@ from tenacity import (
 
 from .models import AgentResult
 from .prompts import PLANNING_SYSTEM_PROMPT, build_user_message
-from .research_loop import RESEARCH_TOOLS, run_research_loop
 from .tools import execute_tool, get_tools
+from .v3.orchestrator import run_research_v3
+
+# Research tools list — used by test_request_guidance.py for backward compat
+RESEARCH_TOOLS = [
+    "web_search",
+    "web_search_broad",
+    "fetch_page",
+    "firecrawl_extract",
+    "query_knowledge_base",
+    "notify_progress",
+    "research_scratchpad",
+    "report_findings",
+    "search_sec_edgar",
+    "fetch_sec_filing",
+    "search_osha",
+    "search_enr",
+    "search_wiki_solar",
+    "search_spw",
+]
 
 # Re-export RESEARCH_TOOLS so consumers importing from src.research continue to work
 __all__ = ["run_research", "run_research_plan", "RESEARCH_TOOLS", "PLANNING_TOOLS", "MODEL"]
@@ -81,7 +99,7 @@ async def run_research(
 ) -> tuple[AgentResult, list[dict], int]:
     """Run EPC research for a single project.
 
-    Delegates to the v2 gap-driven research loop. See research_loop.py
+    Delegates to the v3 procedural research loop. See v3/orchestrator.py
     for the loop implementation.
 
     Args:
@@ -97,7 +115,7 @@ async def run_research(
     Returns:
         (result, agent_log, total_tokens)
     """
-    return await run_research_loop(
+    return await run_research_v3(
         project=project,
         knowledge_context=knowledge_context,
         approved_plan=approved_plan,
