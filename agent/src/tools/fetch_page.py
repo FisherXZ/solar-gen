@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 import httpx
 import tenacity
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 _TIMEOUT = 15.0  # seconds (raised from 10 for slow gov sites)
 _MAX_RETRIES = 2  # up to 3 total attempts
 _MAX_CHARS = 4000  # truncation limit
+_FIRECRAWL_FALLBACK_MIN_CHARS = 100
 _BLOCKED_CONTENT_TYPES = {"image/", "video/", "audio/", "application/zip"}
 _PDF_CONTENT_TYPE = "application/pdf"
 
@@ -82,6 +84,16 @@ def _extract_relevant_sections(text: str) -> str:
     return result
 
 
+async def _firecrawl_fallback(url: str) -> dict:
+    """Attempt Firecrawl scrape as fallback for JS-rendered pages."""
+    if not os.environ.get("FIRECRAWL_API_KEY"):
+        return {"error": "FIRECRAWL_API_KEY not set — cannot fall back to Firecrawl."}
+    from . import firecrawl_scrape
+
+    logger.info("fetch_page: trafilatura failed, falling back to Firecrawl for %s", url)
+    return await firecrawl_scrape.execute({"url": url})
+
+
 DEFINITION = {
     "name": "fetch_page",
     "description": (
@@ -91,7 +103,7 @@ DEFINITION = {
         "cuts off before naming the contractor. Returns cleaned text truncated to "
         "~4000 characters. Works on press releases, trade articles, EPC portfolio "
         "pages, news sites, AND PDF documents (regulatory filings, permits, etc.). "
-        "Will NOT work on pages that require JavaScript rendering."
+        "Automatically falls back to Firecrawl for JavaScript-rendered pages."
     ),
     "input_schema": {
         "type": "object",
@@ -152,8 +164,16 @@ async def execute(tool_input: dict) -> dict:
         no_fallback=False,
     )
 
-    if not text:
-        return {"error": "Could not extract article text from this page."}
+    # Firecrawl fallback: trafilatura returns None or very short text on
+    # JS-rendered pages (e.g. "Enable JavaScript and cookies to continue").
+    if not text or len(text) < _FIRECRAWL_FALLBACK_MIN_CHARS:
+        fallback = await _firecrawl_fallback(url)
+        if "error" not in fallback:
+            return fallback
+        # Both paths failed
+        if not text:
+            return {"error": "Could not extract article text from this page."}
+        # trafilatura returned something short — return it anyway
 
     if len(text) > _MAX_CHARS:
         text = _extract_relevant_sections(text)
