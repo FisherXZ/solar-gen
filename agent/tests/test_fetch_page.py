@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
-from src.tools.fetch_page import _EPC_KEYWORDS, _MAX_CHARS, _extract_relevant_sections
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from src.tools.fetch_page import (
+    _EPC_KEYWORDS,
+    _MAX_CHARS,
+    _extract_relevant_sections,
+)
+from src.tools.fetch_page import (
+    execute as fetch_page_execute,
+)
 
 
 class TestExtractRelevantSections:
@@ -103,3 +114,122 @@ class TestExtractRelevantSections:
         ]
         for name in expected:
             assert name in _EPC_KEYWORDS, f"{name} missing from _EPC_KEYWORDS"
+
+
+class TestFirecrawlFallback:
+    """Tests for the Firecrawl fallback behaviour in fetch_page.execute()."""
+
+    def _make_mock_response(self, html: str = "<html><body>content</body></html>"):
+        mock_response = AsyncMock()
+        mock_response.text = html
+        mock_response.content = b""
+        mock_response.headers = {"content-type": "text/html"}
+        return mock_response
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_firecrawl_when_trafilatura_returns_none(self):
+        """When trafilatura returns None, _firecrawl_fallback is called and its result returned."""
+        mock_response = self._make_mock_response()
+        fallback_result = {
+            "url": "https://example.com",
+            "text": "JS-rendered content",
+            "length": 19,
+        }
+
+        with (
+            patch("src.tools.fetch_page._fetch_with_retry", return_value=mock_response),
+            patch("trafilatura.extract", return_value=None),
+            patch(
+                "src.tools.fetch_page._firecrawl_fallback",
+                new_callable=AsyncMock,
+                return_value=fallback_result,
+            ) as mock_fallback,
+        ):
+            result = await fetch_page_execute({"url": "https://example.com"})
+
+        mock_fallback.assert_called_once_with("https://example.com")
+        assert result == fallback_result
+
+    @pytest.mark.asyncio
+    async def test_falls_back_when_trafilatura_returns_short_text(self):
+        """When trafilatura returns very short text (< 100 chars), fallback fires."""
+        mock_response = self._make_mock_response()
+        short_text = "Enable JavaScript and cookies to continue"  # 41 chars
+        fallback_result = {
+            "url": "https://example.com",
+            "text": "Real JS content here",
+            "length": 20,
+        }
+
+        with (
+            patch("src.tools.fetch_page._fetch_with_retry", return_value=mock_response),
+            patch("trafilatura.extract", return_value=short_text),
+            patch(
+                "src.tools.fetch_page._firecrawl_fallback",
+                new_callable=AsyncMock,
+                return_value=fallback_result,
+            ) as mock_fallback,
+        ):
+            result = await fetch_page_execute({"url": "https://example.com"})
+
+        mock_fallback.assert_called_once_with("https://example.com")
+        assert result == fallback_result
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_both_trafilatura_and_firecrawl_fail(self):
+        """When both trafilatura and Firecrawl fail, an error dict is returned."""
+        mock_response = self._make_mock_response()
+        fallback_error = {"error": "Firecrawl API error: 403"}
+
+        with (
+            patch("src.tools.fetch_page._fetch_with_retry", return_value=mock_response),
+            patch("trafilatura.extract", return_value=None),
+            patch(
+                "src.tools.fetch_page._firecrawl_fallback",
+                new_callable=AsyncMock,
+                return_value=fallback_error,
+            ),
+        ):
+            result = await fetch_page_execute({"url": "https://example.com"})
+
+        assert "error" in result
+        assert "extract" in result["error"].lower() or "Could not" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_no_fallback_when_trafilatura_succeeds(self):
+        """When trafilatura returns sufficient text (>= 100 chars), fallback is NOT called."""
+        mock_response = self._make_mock_response()
+        long_text = "A" * 200  # well over 100 char threshold
+
+        with (
+            patch("src.tools.fetch_page._fetch_with_retry", return_value=mock_response),
+            patch("trafilatura.extract", return_value=long_text),
+            patch(
+                "src.tools.fetch_page._firecrawl_fallback",
+                new_callable=AsyncMock,
+            ) as mock_fallback,
+        ):
+            result = await fetch_page_execute({"url": "https://example.com"})
+
+        mock_fallback.assert_not_called()
+        assert "text" in result
+        assert "error" not in result
+
+    @pytest.mark.asyncio
+    async def test_no_fallback_when_firecrawl_key_missing(self):
+        """When trafilatura returns None and FIRECRAWL_API_KEY is missing, error is returned."""
+        mock_response = self._make_mock_response()
+        key_missing_error = {"error": "FIRECRAWL_API_KEY not set — cannot fall back to Firecrawl."}
+
+        with (
+            patch("src.tools.fetch_page._fetch_with_retry", return_value=mock_response),
+            patch("trafilatura.extract", return_value=None),
+            patch(
+                "src.tools.fetch_page._firecrawl_fallback",
+                new_callable=AsyncMock,
+                return_value=key_missing_error,
+            ),
+        ):
+            result = await fetch_page_execute({"url": "https://example.com"})
+
+        assert "error" in result
